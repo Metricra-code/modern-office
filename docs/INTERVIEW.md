@@ -28,6 +28,14 @@
 - AI-assisted 插畫不要說成自己手繪；設計方向、整合、geometry 與優化可以如實解說。
 - 這份重構由 AI 協助。建議自己閱讀測試、改一個功能並解釋邊界，讓面試官看到你真正理解的部分。
 
+## 有證據的改善（2026-10-10）
+
+- **不是只測 CSS 數值。** 地圖 regression 先重現 320／390px 右側裁切，再測完整 floorplan、130% zoom 左右邊可捲到並能點擊移動，以及 reset 後不造成整頁 overflow。
+- **測試真正的非同步競態。** 讓第一通 `createOffer` 永遠 pending，遠端掛斷仍須立即釋放 tracks；第二通不等待第一通就能建立。延遲的舊 end／decline 和舊 Promise rejection 不得清理新通話。使用假攝影機／麥克風，不代表所有真實網路都可接通。
+- **少做重複工作，不增加架構。** `Intl.DateTimeFormat` 共用一份，而非每列重建 locale formatter。Bun 1.4 的 2,000 次相同時間格式化，三次本機比較為 188.53／283.26／543.53ms → 5.69／4.60／18.12ms，輸出逐一相同。測試包含 sample marker 與超出 Date 範圍 fallback。這是受當時機器負載影響的微測試，不是 LCP／INP 或整站加速比例。[MDN 說明](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleTimeString) 也建議大量重複格式化時共用 formatter。
+- **廣播一次序列化。** Cloudflare presence 的 unit spy 確認同 workspace 多個收件人只做一次 `JSON.stringify`，payload 一致、其他 workspace 不收。32 人全員 20Hz 移動的靜態模型由 20,480 降到 640 次序列化／秒；這是模型，不是線上壓測，也不減少 incoming WebSocket message 配額。
+- **流程要真的接通。** 在 Demo 按 Open a second guest，原分頁也轉入同一個 live workspace；兩個頁面真人 chat 同步有 regression test，不把開新頁當作功能完成。
+
 ## 面試前自己練習
 
 - 試著增加第五個房間，說明會改到哪些檔案。

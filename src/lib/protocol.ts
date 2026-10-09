@@ -19,7 +19,7 @@ export const playerSchema = profileSchema.extend({
   y: pointSchema.shape.y,
   status: z.enum(['available', 'focus', 'away']),
 });
-const signalSchema = z.discriminatedUnion('kind', [
+const legacySignalSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('invite') }).strict(),
   z.object({ kind: z.literal('accept') }).strict(),
   z.object({ kind: z.literal('decline') }).strict(),
@@ -35,6 +35,26 @@ const signalSchema = z.discriminatedUnion('kind', [
     })
     .strict(),
 ]);
+const callIdField = { callId: z.string().uuid() };
+const signalSchema = z.discriminatedUnion('kind', [
+  legacySignalSchema.options[0].extend(callIdField),
+  legacySignalSchema.options[1].extend(callIdField),
+  legacySignalSchema.options[2].extend(callIdField),
+  legacySignalSchema.options[3].extend(callIdField),
+  legacySignalSchema.options[4].extend(callIdField),
+  legacySignalSchema.options[5].extend(callIdField),
+  legacySignalSchema.options[6].extend(callIdField),
+]);
+const legacyCallEventSchema = z
+  .object({
+    type: z.literal('signal'),
+    target: z.string().uuid(),
+    signal: legacySignalSchema,
+  })
+  .strict();
+// Legacy calls are rejected with a reload hint, never forwarded without a call ID.
+export const isLegacyCallEvent = (value: unknown): boolean =>
+  legacyCallEventSchema.safeParse(value).success;
 export const clientEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('move'), ...pointSchema.shape }).strict(),
   z.object({ type: z.literal('profile'), ...profileSchema.shape }).strict(),

@@ -40,6 +40,7 @@ export const Workspace = () => {
   const call = useCall({
     incoming: office.signal,
     connected: office.connection === 'connected',
+    peers: office.peers,
     send: office.sendSignal,
   });
   const [view, setView] = useState<'office' | 'team'>('office');
@@ -60,6 +61,37 @@ export const Workspace = () => {
     document.querySelector<HTMLAnchorElement>('#workspace-nav a')?.focus();
     return () => trigger?.focus();
   }, [mobileNavigation]);
+  useEffect(() => {
+    const viewport = window.matchMedia('(max-width: 760px)');
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches) setMobileNavigation(false);
+    };
+    viewport.addEventListener('change', closeOnDesktop);
+    return () => viewport.removeEventListener('change', closeOnDesktop);
+  }, []);
+  const handleNavigationKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (
+      !mobileNavigation ||
+      (event.target instanceof Element && event.target.closest('dialog[open]'))
+    )
+      return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setMobileNavigation(false);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = document.querySelectorAll<HTMLElement>(
+      '#workspace-nav a[href], #workspace-nav button:not([disabled])',
+    );
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const boundary = event.shiftKey ? first : last;
+    if (document.activeElement === boundary || !document.activeElement?.closest('#workspace-nav')) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    }
+  };
   const players = [...office.peers, office.self];
   const activeRoom = getRoom(office.self);
   const isDemo = office.mode === 'demo';
@@ -67,6 +99,7 @@ export const Workspace = () => {
   const room = getRoomDetails(activeRoom);
   const RoomIcon = roomIcons[activeRoom];
   const callTarget = office.peers.find((player) => player.id === call.target);
+  const selectedPeer = office.peers.find((player) => player.id === selected?.id);
   const closeDialog = () => {
     setDialog(undefined);
     setCopyError('');
@@ -127,12 +160,13 @@ export const Workspace = () => {
     }
   };
   const startCall = (player: Player) => {
-    if (!connected) {
+    const peer = office.peers.find((candidate) => candidate.id === player.id);
+    if (!connected || !peer) {
       setSelected(player);
       return;
     }
     setSelected(undefined);
-    void call.start(player.id);
+    void call.start(peer.id);
   };
   const error = office.error || call.error || roomError;
 
@@ -140,11 +174,9 @@ export const Workspace = () => {
     <div
       className={`app-shell ${mobileNavigation ? 'mobile-nav-open' : ''}`}
       data-mobile-tab={mobileTab}
-      onKeyDown={(event) => {
-        if (mobileNavigation && event.key === 'Escape') setMobileNavigation(false);
-      }}
+      onKeyDown={handleNavigationKeyDown}
     >
-      <a href="#main" className="skip-link">
+      <a href="#main" className="skip-link" inert={mobileNavigation}>
         Skip to workspace
       </a>
       {mobileNavigation && (
@@ -169,7 +201,7 @@ export const Workspace = () => {
         onHelp={() => setDialog('help')}
         isDemo={isDemo}
       />
-      <div className="workspace-main">
+      <div className="workspace-main" inert={mobileNavigation}>
         <header className="topbar">
           <div className="breadcrumb">
             <button
@@ -398,7 +430,7 @@ export const Workspace = () => {
         </main>
       </div>
       {error && (
-        <div className="toast" role="alert">
+        <div className="toast" role="alert" inert={mobileNavigation}>
           <Info size={18} />
           <p>{error}</p>
           <button
@@ -520,6 +552,9 @@ export const Workspace = () => {
           href={inviteUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => {
+            if (isDemo) office.enterLive();
+          }}
         >
           Open a second guest <ArrowUpRight size={16} />
         </a>
@@ -603,14 +638,21 @@ export const Workspace = () => {
                 </button>
               </>
             ) : (
-              <button
-                className="primary-button"
-                disabled={!connected || call.phase !== 'idle'}
-                onClick={() => startCall(selected)}
-              >
-                <Phone size={17} />
-                Start a video call
-              </button>
+              <>
+                {connected && !selectedPeer && (
+                  <p className="dialog-description" role="status">
+                    This guest has left the workspace.
+                  </p>
+                )}
+                <button
+                  className="primary-button"
+                  disabled={!connected || !selectedPeer || call.phase !== 'idle'}
+                  onClick={() => startCall(selected)}
+                >
+                  <Phone size={17} />
+                  Start a video call
+                </button>
+              </>
             )}
           </div>
         )}

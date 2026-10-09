@@ -28,7 +28,7 @@ test('hosted entry joins live without signup and a second guest shares the works
     await expect(page.getByRole('log')).toContainText('Hello from the second guest.');
     await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: 'docs/assets/workspace-live.png', fullPage: true });
+    await page.screenshot({ path: test.info().outputPath('workspace-live.png'), fullPage: true });
     await page.reload();
     await expect(page.getByText('Live workspace', { exact: true })).toBeVisible();
     expect(new URL(page.url()).searchParams.get('workspace')).toBe(workspace);

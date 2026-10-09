@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { clientEventSchema, serverEventSchema, workspaceSchema } from '../../src/lib/protocol';
+import {
+  clientEventSchema,
+  isLegacyCallEvent,
+  serverEventSchema,
+  workspaceSchema,
+} from '../../src/lib/protocol';
 
 describe('untrusted messages', () => {
   test('trims messages and rejects empty or oversized text', () => {
@@ -29,5 +34,43 @@ describe('untrusted messages', () => {
     expect(serverEventSchema.safeParse({ type: 'snapshot', players: 'not-an-array' }).success).toBe(
       false,
     );
+  });
+  test('requires a UUID call ID on every signaling message', () => {
+    const callId = crypto.randomUUID();
+    const target = crypto.randomUUID();
+    const signals = [
+      { kind: 'invite' },
+      { kind: 'accept' },
+      { kind: 'decline' },
+      { kind: 'end' },
+      { kind: 'offer', sdp: 'offer' },
+      { kind: 'answer', sdp: 'answer' },
+      { kind: 'ice', candidate: 'candidate', sdpMid: null, sdpMLineIndex: null },
+    ];
+    for (const signal of signals) {
+      const event = { type: 'signal', target, signal };
+      expect(clientEventSchema.safeParse(event).success).toBe(false);
+      expect(clientEventSchema.safeParse({ ...event, signal: { ...signal, callId } }).success).toBe(
+        true,
+      );
+      expect(
+        clientEventSchema.safeParse({ ...event, signal: { ...signal, callId: 'old-call' } })
+          .success,
+      ).toBe(false);
+      expect(
+        serverEventSchema.safeParse({ type: 'signal', from: target, signal: { ...signal, callId } })
+          .success,
+      ).toBe(true);
+    }
+  });
+  test('recognizes only valid legacy calls for the reload hint', () => {
+    const event = { type: 'signal', target: crypto.randomUUID(), signal: { kind: 'invite' } };
+    expect(isLegacyCallEvent(event)).toBe(true);
+    expect(isLegacyCallEvent({ ...event, signal: { ...event.signal, callId: 'invalid' } })).toBe(
+      false,
+    );
+    expect(isLegacyCallEvent({ ...event, target: 'invalid' })).toBe(false);
+    expect(isLegacyCallEvent({ ...event, from: crypto.randomUUID() })).toBe(false);
+    expect(isLegacyCallEvent({ type: 'chat', text: 'hello', channel: 'general' })).toBe(false);
   });
 });

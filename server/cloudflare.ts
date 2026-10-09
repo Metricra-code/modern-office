@@ -11,6 +11,7 @@ import type {
 import { z } from 'zod';
 import {
   clientEventSchema,
+  isLegacyCallEvent,
   messageSchema,
   playerSchema,
   profileSchema,
@@ -165,8 +166,9 @@ export class OfficeDurableObject {
       return;
     }
     let requestId: string | undefined;
+    let incoming: unknown;
     try {
-      const incoming: unknown = JSON.parse(raw);
+      incoming = JSON.parse(raw);
       const envelope = chatEnvelopeSchema.safeParse(incoming);
       requestId = envelope.success ? envelope.data.requestId : undefined;
       const event = clientEventSchema.parse(incoming);
@@ -174,7 +176,9 @@ export class OfficeDurableObject {
     } catch {
       this.send(socket, {
         type: 'error',
-        message: 'That action could not be completed. Please try again.',
+        message: isLegacyCallEvent(incoming)
+          ? 'Calling was updated. Reload this page before starting a call.'
+          : 'That action could not be completed. Please try again.',
         ...(requestId ? { requestId } : {}),
       });
     }
@@ -239,17 +243,22 @@ export class OfficeDurableObject {
   }
 
   private send(socket: WorkerWebSocket, event: ServerEvent): void {
+    this.sendText(socket, JSON.stringify(event));
+  }
+
+  private sendText(socket: WorkerWebSocket, message: string): void {
     if (socket.readyState !== 1) return;
     try {
-      socket.send(JSON.stringify(event));
+      socket.send(message);
     } catch {
       socket.close(1011, 'Connection unavailable');
     }
   }
 
   private broadcast(workspaceId: string, event: ServerEvent): void {
+    const message = JSON.stringify(event);
     for (const [socket, connection] of this.connections)
-      if (connection.workspaceId === workspaceId) this.send(socket, event);
+      if (connection.workspaceId === workspaceId) this.sendText(socket, message);
   }
 
   private publishPresence(workspaceId: string): void {

@@ -60,7 +60,10 @@ test('responsive screenshots have no runtime errors', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Office', exact: true })).toBeVisible();
     await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: `docs/assets/workspace-${label}.png`, fullPage: true });
+    await page.screenshot({
+      path: test.info().outputPath(`workspace-${label}.png`),
+      fullPage: true,
+    });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

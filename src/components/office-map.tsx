@@ -129,7 +129,7 @@ export const OfficeMap = ({ self, peers, onMove, onSelect }: OfficeMapProps) => 
           className="map-world"
           ref={worldRef}
           onClick={walkTo}
-          style={{ transform: `scale(${zoom})` }}
+          style={{ width: `${Math.round(zoom * 100)}%` }}
         >
           <OfficeIllustration />
           {destination && (

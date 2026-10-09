@@ -1,6 +1,7 @@
 import type { ServerWebSocket } from 'bun';
 import {
   clientEventSchema,
+  isLegacyCallEvent,
   profileSchema,
   workspaceSchema,
   type ServerEvent,
@@ -97,8 +98,10 @@ const server = Bun.serve({
         socket.close(1008, 'Too many messages');
         return;
       }
+      let incoming: unknown;
       try {
-        const event = clientEventSchema.parse(JSON.parse(String(raw)));
+        incoming = JSON.parse(String(raw));
+        const event = clientEventSchema.parse(incoming);
         if (event.type === 'chat') {
           if (now - socket.data.lastChat < 350) {
             send(socket, {
@@ -130,7 +133,9 @@ const server = Bun.serve({
       } catch {
         send(socket, {
           type: 'error',
-          message: 'That action could not be completed. Please try again.',
+          message: isLegacyCallEvent(incoming)
+            ? 'Calling was updated. Reload this page before starting a call.'
+            : 'That action could not be completed. Please try again.',
         });
       }
     },

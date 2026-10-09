@@ -18,7 +18,7 @@ Next.js static export (HTML + JS + local fonts + WebP)
 - `server/rooms.ts` owns authoritative identities, membership, non-overlapping arrivals and bounded history independently of socket APIs.
 - `server/index.ts` is the native Bun local transport. `server/cloudflare.ts` is the hosted transport; both reuse that domain.
 - `src/hooks/use-office.ts` handles handshake deadlines, capped reconnect backoff and validated state. A single pending chat request waits for server ACK; rejected/disconnected/timed-out requests preserve the composer's draft. No automatic replay that might duplicate chat.
-- `src/hooks/use-call.ts` owns explicit consent, SDP/ICE ordering, per-call generation guards, timeouts and media cleanup. Late asynchronous failures cannot terminate a newer call.
+- `src/hooks/use-call.ts` owns explicit consent, SDP/ICE ordering, invitation UUIDs, per-call generation guards, timeouts and media cleanup. Hangup bypasses pending SDP work; a new call receives a fresh queue. Late signals must match both guest and invitation, and late asynchronous failures cannot terminate a newer call. Peer departure ends a pending or active call immediately.
 - Components receive typed callbacks; no global state framework is needed.
 
 ## Guest behavior
@@ -31,6 +31,8 @@ Next.js static export (HTML + JS + local fonts + WebP)
 
 **Movement:** furniture and plants are passable decoration; office boundaries and room walls remain authoritative. Keyboard movement checks these boundaries; click relocates to a legal destination. Room shortcuts scan a bounded set of open spots, avoiding the latest known peer positions. This improves individual avatar selection but is not an authoritative reservation: simultaneous arrivals or deliberate same-point clicks can still overlap; the People list remains available. No pathfinding, proximity calls or booking system.
 
+**Responsive navigation:** the complete map fits the initial viewport, including 320px phones. Zoom changes layout width rather than applying a centered transform, so both edges remain reachable by scrolling. A mobile drawer makes the underlying workspace inert, contains keyboard focus, and releases it on close or a desktop resize; native modal dialogs keep their own focus behavior.
+
 ## Hosted hibernation
 
 One Durable Object coordinator limits the whole portfolio to 256 guests and 64 workspaces. `acceptWebSocket` keeps connections alive while the isolate hibernates. Validated socket attachments restore identity, position, presence, cooldown and rate-limit windows.
@@ -42,7 +44,7 @@ Each occupied workspace has at most one SQLite row containing the latest 100 mes
 - Hosted upgrade checks exact same origin; optional additional origins are an explicit allowlist. Bun production requires `ALLOWED_ORIGINS`.
 - Strict input schemas reject spoofed sender fields, non-finite coordinates and unsafe destinations. React renders user content as escaped text.
 - 32 guests/workspace; 256 total; 64 workspaces; 100 messages/workspace; 20KB messages; 40 events/sec/socket; 350ms chat cooldown.
-- Signaling targets must belong to the same workspace. Request IDs correlate delivery only; they never confer identity or authority.
+- Signaling targets must belong to the same workspace. Request IDs and call IDs correlate delivery/invitations only; they never confer identity or authority.
 - No auth, permanent profile storage, analytics, recording or app content logs. Query parameters include a guest display name; do not add request-URL logging without redaction.
 - Free cloud quotas can make the service unavailable. Exact Origin checking is not authorization, and per-socket quotas do not defeat distributed abuse.
 

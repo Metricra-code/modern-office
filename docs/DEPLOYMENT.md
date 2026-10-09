@@ -36,6 +36,12 @@ bun run dev:cloudflare    # http://127.0.0.1:3103
 
 ## 部署後驗收
 
+### Calling 協定更新
+
+2026-10-10 起，每一通 invitation 與後續 SDP／ICE／結束訊號必須帶同一個 UUID `callId`，避免前一通延遲訊號結束新通話。部署此更新後，已開啟的訪客分頁都應重新整理再試通話；新舊 calling frames 不互通。Bun 與 Cloudflare 對合法但缺少 ID 的舊呼叫明確提示 `Calling was updated. Reload this page before starting a call.`，不轉送該訊號，其他 presence／chat 維持可用。格式錯誤或偽造欄位仍是一般拒絕，不當成舊版本。
+
+只對帶 fingerprint 的 `/_next/static/*` 設一年 `immutable` browser cache，依 [Cloudflare 官方 `_headers` 語法](https://developers.cloudflare.com/workers/static-assets/headers/#configure-custom-browser-cache-behavior)。HTML 與未 hash 的地圖沒有套用長效快取，避免部署後保留舊入口。測試截圖寫入 ignored 的 `test-results/`，一般驗收不再覆寫 Git 追蹤的作品圖片。
+
 ```bash
 PLAYWRIGHT_BASE_URL=https://modern-office.YOUR-SUBDOMAIN.workers.dev bun run test:e2e
 ```

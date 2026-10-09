@@ -4,6 +4,13 @@ import { ArrowUp, Hash, MessageCircle, Phone, Users } from 'lucide-react';
 import type { Channel, ChatMessage, Player } from '@/lib/protocol';
 import { getRoomDetails, type RoomId } from '@/lib/space';
 import { Avatar } from './avatar';
+
+const messageTime = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+const formatMessageTime = (sentAt: number): string => {
+  const date = new Date(sentAt);
+  return Number.isNaN(date.getTime()) ? 'Invalid Date' : messageTime.format(date);
+};
+
 interface ChatPanelProps {
   messages: readonly ChatMessage[];
   players: readonly Player[];
@@ -152,14 +159,7 @@ export const ChatPanel = ({
                     <div>
                       <div className="message-meta">
                         <strong>{message.name}</strong>
-                        <time>
-                          {message.sentAt
-                            ? new Date(message.sentAt).toLocaleTimeString('en-GB', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'sample'}
-                        </time>
+                        <time>{message.sentAt ? formatMessageTime(message.sentAt) : 'sample'}</time>
                       </div>
                       <p>{message.text}</p>
                     </div>
