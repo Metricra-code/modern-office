@@ -1,0 +1,80 @@
+import type { ChatMessage, Player } from './protocol';
+export const DEMO_PLAYERS: readonly Player[] = [
+  {
+    id: '00000000-0000-4000-8000-000000000001',
+    name: 'Mia Chen',
+    color: 'sage',
+    x: 145,
+    y: 140,
+    status: 'available',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000002',
+    name: 'Oliver Park',
+    color: 'blue',
+    x: 440,
+    y: 225,
+    status: 'available',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000003',
+    name: 'Sofia Rivera',
+    color: 'plum',
+    x: 560,
+    y: 135,
+    status: 'available',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000004',
+    name: 'Leo Wang',
+    color: 'gold',
+    x: 145,
+    y: 400,
+    status: 'focus',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000005',
+    name: 'Alex Kim',
+    color: 'blue',
+    x: 630,
+    y: 475,
+    status: 'away',
+  },
+];
+export const DEMO_MESSAGES: readonly ChatMessage[] = [
+  {
+    id: '00000000-0000-4000-8000-000000000011',
+    senderId: DEMO_PLAYERS[0].id,
+    name: 'Mia Chen',
+    color: 'sage',
+    text: 'I left the notes for Thursday’s review in the meeting room.',
+    channel: 'general',
+    sentAt: 0,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000012',
+    senderId: DEMO_PLAYERS[1].id,
+    name: 'Oliver Park',
+    color: 'blue',
+    text: 'Thanks. I’ll check them after standup.',
+    channel: 'general',
+    sentAt: 0,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000013',
+    senderId: DEMO_PLAYERS[2].id,
+    name: 'Sofia Rivera',
+    color: 'plum',
+    text: 'I’m in the focus room for the next hour. Message me if you need anything.',
+    channel: 'general',
+    sentAt: 0,
+  },
+];
+export const DEFAULT_PLAYER: Player = {
+  id: 'local',
+  name: 'Kai',
+  color: 'terracotta',
+  x: 450,
+  y: 315,
+  status: 'available',
+};

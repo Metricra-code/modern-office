@@ -1,0 +1,50 @@
+{
+  "name": "modern-office",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "scripts": {
+    "dev": "concurrently -k -n web,realtime -c green,blue \"bun run dev:web\" \"bun run dev:realtime\"",
+    "dev:web": "next dev --hostname 127.0.0.1 --port 3100",
+    "dev:realtime": "bun --watch server/index.ts",
+    "build": "next build",
+    "start": "bun server/static.ts",
+    "start:realtime": "bun server/index.ts",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests/unit",
+    "test:e2e": "playwright test",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:cloudflare": "wrangler dev --ip 127.0.0.1 --port 3103",
+    "deploy": "bun run build:public && wrangler deploy",
+    "deploy:check": "wrangler deploy --dry-run",
+    "build:public": "NEXT_PUBLIC_DEFAULT_MODE=live NEXT_PUBLIC_REALTIME_URL=/office bun run build"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "^5.3.0",
+    "@fontsource/urbanist": "^5.3.0",
+    "lucide-react": "^1.53.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "@playwright/test": "^1.64.0",
+    "@types/bun": "^1.4.2",
+    "@types/node": "24",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "concurrently": "^10.0.6",
+    "eslint": "9",
+    "eslint-config-next": "^16.4.0",
+    "prettier": "^3.9.9",
+    "typescript": "5.9.3",
+    "wrangler": "4.149.0"
+  }
+}
