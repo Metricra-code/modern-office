@@ -39,7 +39,7 @@ bun dev
 
 ### 真人互動
 
-1. 按 **Connect live**。
+1. 本機按 **Join live room**；公開版進入即連線。
 2. 用 **Invite people** 複製 workspace link，在另一個瀏覽器視窗（公開版可跨電腦）開啟。
 3. 修改不同名字；走動與傳訊會同步。
 4. 點訪客 → **Start a video call**，另一端按 **Accept call**。

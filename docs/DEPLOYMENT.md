@@ -54,6 +54,10 @@ PLAYWRIGHT_BASE_URL=https://modern-office.YOUR-SUBDOMAIN.workers.dev bun run tes
 
 GitHub 發布前補齊 Lucide 完整授權 notices，未修改功能程式碼。公開站已更新至 `02d4afe5-7238-4cd4-82a8-c29595d9f9d3`，Cloudflare 確認承接 100% 流量；公開 notice 與安裝套件的 LICENSE byte-for-byte 一致，更新後 15 個公開站 E2E 再次通過。本機 Bun 的 14 個 E2E 通過，另 1 個僅針對公開站的入口測試按設定略過。
 
+2026-10-10 UI／UX 與可靠性改善後複驗：35 個單元測試、25 個 Cloudflare 本機 E2E、25 個公開站 E2E 全數通過；Bun 開發環境 24 個 E2E 通過、1 個公開入口測試按設定略過。`bun run check`（format／lint／typecheck／test／build）、public build 與 deploy dry-run 通過。公開版本 `7f2bdb37-b2a3-41de-b535-919fad6c9afe`，程式提交 `448f56e`。
+
+部署後檢查 22 個 HTML 引用／驗收資產與端點，均 HTTP 200；hashed JS／CSS／fonts 回傳 `public, max-age=31536000, immutable`，HTML 與未 hash 的地圖維持 `public, max-age=0, must-revalidate`。現代瀏覽器初始 9 scripts 為 189,531 B gzip（改善前 188,982 B，新增 call-ID 保護等程式後 +549 B），不含 `noModule` polyfill；這不是 bundle 減量的宣稱。地圖維持 162,696 B。人工公開瀏覽確認 320px 地圖完整、live 可連線；本機人工確認 130% 放大後能捲到右緣。沒有宣稱 LCP／INP、實體觸控裝置或所有 NAT 都已驗證；`bun audit` 的既有 dev-toolchain 警示仍存在。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
