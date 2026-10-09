@@ -263,6 +263,7 @@ export const useOffice = () => {
     [mode, send, finishChat],
   );
   const enterLive = useCallback(() => {
+    finishChat(false);
     setPeers([]);
     setMessages([]);
     setError('');
@@ -272,8 +273,9 @@ export const useOffice = () => {
     url.searchParams.set('workspace', workspace);
     url.searchParams.set('mode', 'live');
     window.history.replaceState({}, '', url);
-  }, [workspace]);
+  }, [workspace, finishChat]);
   const enterDemo = useCallback(() => {
+    finishChat(false);
     setMode('demo');
     setConnection('demo');
     setPeers([...DEMO_PLAYERS]);
@@ -283,7 +285,7 @@ export const useOffice = () => {
     const url = new URL(window.location.href);
     url.searchParams.set('mode', 'demo');
     window.history.replaceState({}, '', url);
-  }, [updateSelf]);
+  }, [updateSelf, finishChat]);
   const sendSignal = useCallback(
     (target: string, signal: Signal): boolean => send({ type: 'signal', target, signal }),
     [send],

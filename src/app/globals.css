@@ -992,6 +992,26 @@ kbd {
   max-height: 520px;
   min-height: 250px;
 }
+.chat-content:focus-visible {
+  outline-offset: -3px;
+}
+.chat-jump-latest {
+  align-self: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  max-width: calc(100% - 24px);
+  margin: 8px 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--accent);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+.chat-jump-latest:hover {
+  background: var(--accent-soft);
+}
 .chat-date {
   display: flex;
   align-items: center;

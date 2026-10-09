@@ -13,11 +13,11 @@ Next.js static export (HTML + JS + local fonts + WebP)
                     signaling travels over the WebSocket, media does not
 ```
 
-- Layout, metadata and case-study are build-time Server Components. Browser movement, devices and connections live in one client boundary, with no request-time Next server.
+- Layout, metadata and the case-study body are build-time Server Components. Only its query-aware return links use a small client component under Suspense. Browser movement, devices and connections live in one client boundary, with no request-time Next server.
 - `src/lib/protocol.ts` validates both transport directions; `src/lib/space.ts` owns walkability, room classification and accessible arrival points.
 - `server/rooms.ts` owns authoritative identities, membership, non-overlapping arrivals and bounded history independently of socket APIs.
 - `server/index.ts` is the native Bun local transport. `server/cloudflare.ts` is the hosted transport; both reuse that domain.
-- `src/hooks/use-office.ts` handles handshake deadlines, capped reconnect backoff and validated state. A single pending chat request waits for server ACK; rejected/disconnected/timed-out requests preserve the composer's draft. No automatic replay that might duplicate chat.
+- `src/hooks/use-office.ts` handles handshake deadlines, capped reconnect backoff and validated state. A single pending chat request waits for server ACK; rejected/disconnected/timed-out requests preserve the composer's draft. Changing mode synchronously cancels the old pending request before passive socket cleanup. No automatic replay that might duplicate chat.
 - `src/hooks/use-call.ts` owns explicit consent, SDP/ICE ordering, invitation UUIDs, per-call generation guards, timeouts and media cleanup. Hangup bypasses pending SDP work; a new call receives a fresh queue. Late signals must match both guest and invitation, and late asynchronous failures cannot terminate a newer call. Peer departure ends a pending or active call immediately.
 - Components receive typed callbacks; no global state framework is needed.
 
@@ -32,6 +32,12 @@ Next.js static export (HTML + JS + local fonts + WebP)
 **Movement:** furniture and plants are passable decoration; office boundaries and room walls remain authoritative. Keyboard movement checks these boundaries; click relocates to a legal destination. Room shortcuts scan a bounded set of open spots, avoiding the latest known peer positions. This improves individual avatar selection but is not an authoritative reservation: simultaneous arrivals or deliberate same-point clicks can still overlap; the People list remains available. No pathfinding, proximity calls or booking system.
 
 **Responsive navigation:** the complete map fits the initial viewport, including 320px phones. Zoom changes layout width rather than applying a centered transform, so both edges remain reachable by scrolling. A mobile drawer makes the underlying workspace inert, contains keyboard focus, and releases it on close or a desktop resize; native modal dialogs keep their own focus behavior.
+
+**Conversation reading:** new messages follow only near the bottom; reading history exposes an explicit jump instead of scrolling the reader away. Other channels and the People panel do not trigger chat scrolling. Mobile visibility changes preserve reading position. Tabs have one tab stop, wrapped arrow navigation, Home/End and a labeled focusable panel. At most ten in-memory mode/channel drafts are kept; an ACK clears only its submitted draft revision, not later edits or another channel. Drafts are not persisted across page navigation or reload.
+
+**Navigation context:** engineering notes and the brand link carry only a validated workspace routing key and exact demo/live mode through fixed internal paths. Returning can establish a fresh guest identity in the same workspace; it does not preserve calls or profiles. Before hydration, case-study return links are non-interactive rather than pointing to the wrong room.
+
+**Render boundary:** the bounded message list receives only immutable messages and the current sender ID. Filtering and the list are memoized, so avatar movement does not repeatedly format unchanged messages. People, call controls and presence remain live; no virtualized list or additional state library is introduced.
 
 ## Hosted hibernation
 

@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { Player } from '@/lib/protocol';
+import { workspaceRoute } from '@/lib/office-navigation';
 import { getRoom, ROOMS, type RoomId } from '@/lib/space';
 import { Avatar } from './avatar';
 export const roomIcons = {
@@ -22,6 +23,7 @@ export const roomIcons = {
 };
 interface SidebarProps {
   self: Player;
+  workspace: string;
   players: readonly Player[];
   activeRoom: RoomId;
   view: 'office' | 'team';
@@ -34,6 +36,7 @@ interface SidebarProps {
 }
 export const Sidebar = ({
   self,
+  workspace,
   players,
   activeRoom,
   view,
@@ -45,7 +48,11 @@ export const Sidebar = ({
   isDemo,
 }: SidebarProps) => (
   <aside id="workspace-nav" className="sidebar" aria-label="Workspace navigation">
-    <Link href="/" className="brand" aria-label="Modern Office home">
+    <Link
+      href={workspaceRoute('office', workspace, isDemo ? 'demo' : 'live')}
+      className="brand"
+      aria-label="Modern Office home"
+    >
       <span className="brand-mark" aria-hidden="true">
         <span />
         <span />
@@ -73,7 +80,7 @@ export const Sidebar = ({
         <Users size={18} />
         Team<span className="nav-number">{players.length}</span>
       </button>
-      <Link href="/case-study/">
+      <Link href={workspaceRoute('notes', workspace, isDemo ? 'demo' : 'live')}>
         <BookOpen size={18} />
         Engineering notes
         <ArrowUpRight size={14} />

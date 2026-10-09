@@ -27,6 +27,7 @@ import {
 import { useOffice } from '@/hooks/use-office';
 import { useCall } from '@/hooks/use-call';
 import type { Player, Profile } from '@/lib/protocol';
+import { workspaceRoute } from '@/lib/office-navigation';
 import { getRoom, getRoomDetails, isWalkable, ROOMS, type RoomId } from '@/lib/space';
 import { Avatar } from './avatar';
 import { ChatPanel } from './chat-panel';
@@ -169,6 +170,7 @@ export const Workspace = () => {
     void call.start(peer.id);
   };
   const error = office.error || call.error || roomError;
+  const notesHref = workspaceRoute('notes', office.workspace, office.mode);
 
   return (
     <div
@@ -187,6 +189,7 @@ export const Workspace = () => {
         />
       )}
       <Sidebar
+        workspace={office.workspace}
         self={office.self}
         players={players}
         activeRoom={activeRoom}
@@ -394,6 +397,7 @@ export const Workspace = () => {
               self={office.self}
               room={activeRoom}
               isDemo={isDemo}
+              active={mobileTab === 'chat'}
               canSend={isDemo || connected}
               onSend={office.chat}
               onCall={startCall}
@@ -422,7 +426,7 @@ export const Workspace = () => {
                   )}
                 </>
               )}
-              <Link href="/case-study/">
+              <Link href={notesHref}>
                 Engineering notes <ArrowUpRight size={13} />
               </Link>
             </div>
@@ -606,7 +610,7 @@ export const Workspace = () => {
             </span>
           </p>
         </div>
-        <Link href="/case-study/" className="text-button">
+        <Link href={notesHref} className="text-button">
           Read the engineering notes <ArrowUpRight size={16} />
         </Link>
       </Dialog>

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, Hash, MessageCircle, Phone, Users } from 'lucide-react';
 import type { Channel, ChatMessage, Player } from '@/lib/protocol';
 import { getRoomDetails, type RoomId } from '@/lib/space';
@@ -10,6 +10,38 @@ const formatMessageTime = (sentAt: number): string => {
   const date = new Date(sentAt);
   return Number.isNaN(date.getTime()) ? 'Invalid Date' : messageTime.format(date);
 };
+const TABS = ['general', 'room', 'people'] as const;
+type ChatTab = (typeof TABS)[number];
+type DraftKey = `${'demo' | 'live'}:${Channel}`;
+interface ComposerDraft {
+  text: string;
+  revision: number;
+  error: string;
+}
+const EMPTY_DRAFT: ComposerDraft = { text: '', revision: 0, error: '' };
+const MessageList = memo(function MessageList({
+  messages,
+  selfId,
+}: {
+  messages: readonly ChatMessage[];
+  selfId: string;
+}) {
+  return messages.map((message) => (
+    <article
+      className={`message ${message.senderId === selfId ? 'message-self' : ''}`}
+      key={message.id}
+    >
+      <Avatar name={message.name} color={message.color} size="small" />
+      <div>
+        <div className="message-meta">
+          <strong>{message.name}</strong>
+          <time>{message.sentAt ? formatMessageTime(message.sentAt) : 'sample'}</time>
+        </div>
+        <p>{message.text}</p>
+      </div>
+    </article>
+  ));
+});
 
 interface ChatPanelProps {
   messages: readonly ChatMessage[];
@@ -20,6 +52,7 @@ interface ChatPanelProps {
   canSend: boolean;
   onSend: (text: string, channel: Channel) => Promise<boolean>;
   onCall: (player: Player) => void;
+  active?: boolean;
 }
 export const ChatPanel = ({
   messages,
@@ -30,22 +63,75 @@ export const ChatPanel = ({
   canSend,
   onSend,
   onCall,
+  active = true,
 }: ChatPanelProps) => {
-  const [tab, setTab] = useState<'general' | 'room' | 'people'>('general');
-  const [draft, setDraft] = useState('');
-  const [formError, setFormError] = useState('');
+  const [tab, setTab] = useState<ChatTab>('general');
+  const [drafts, setDrafts] = useState<Partial<Record<DraftKey, ComposerDraft>>>({});
   const [sending, setSending] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const channel: Channel = tab === 'room' ? room : 'general';
-  const visible = messages.filter((message) => message.channel === channel);
+  const draftKey: DraftKey = `${isDemo ? 'demo' : 'live'}:${channel}`;
+  const composer = drafts[draftKey] ?? EMPTY_DRAFT;
+  const draft = composer.text;
+  const panelKey = tab === 'people' ? 'people' : draftKey;
+  const visible = useMemo(
+    () => messages.filter((message) => message.channel === channel),
+    [messages, channel],
+  );
+  const latestMessageId = tab === 'people' ? undefined : visible.at(-1)?.id;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const readingRef = useRef<{ panel?: string; latest?: string; follow: boolean }>({ follow: true });
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'instant'
-        : 'smooth',
+    const frame = requestAnimationFrame(() => {
+      const panel = scrollRef.current;
+      if (!panel?.clientHeight) return;
+      const reading = readingRef.current;
+      const switchedPanel = reading.panel !== panelKey;
+      if (switchedPanel || reading.follow) {
+        panel.scrollTop = tab === 'people' ? 0 : panel.scrollHeight;
+        setHasNewMessages(false);
+      } else if (latestMessageId && latestMessageId !== reading.latest) {
+        setHasNewMessages(true);
+      }
+      readingRef.current = {
+        panel: panelKey,
+        latest: latestMessageId,
+        follow: switchedPanel || reading.follow,
+      };
     });
-  }, [messages, channel]);
+    return () => cancelAnimationFrame(frame);
+  }, [active, latestMessageId, panelKey, tab]);
+  const jumpToLatest = () => {
+    const panel = scrollRef.current;
+    if (!panel) return;
+    readingRef.current = { ...readingRef.current, follow: true };
+    panel.scrollTop = panel.scrollHeight;
+    setHasNewMessages(false);
+    panel.focus();
+  };
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = TABS.indexOf(tab);
+    const nextIndex =
+      event.key === 'ArrowRight'
+        ? (index + 1) % TABS.length
+        : event.key === 'ArrowLeft'
+          ? (index + TABS.length - 1) % TABS.length
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? TABS.length - 1
+              : undefined;
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    const next = TABS[nextIndex];
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
+  const setDraftError = (error: string) =>
+    setDrafts((current) => ({
+      ...current,
+      [draftKey]: { ...(current[draftKey] ?? EMPTY_DRAFT), error },
+    }));
   return (
     <aside className="chat-panel" aria-label="Team conversations">
       <div className="chat-heading">
@@ -56,34 +142,22 @@ export const ChatPanel = ({
         <span className="subtle-tag">{isDemo ? 'DEMO' : 'LIVE'}</span>
       </div>
       <div className="chat-tabs" role="tablist" aria-label="Conversation channels">
-        <button
-          role="tab"
-          id="tab-general"
-          aria-controls="chat-content"
-          aria-selected={tab === 'general'}
-          onClick={() => setTab('general')}
-        >
-          # General
-        </button>
-        <button
-          role="tab"
-          id="tab-room"
-          aria-controls="chat-content"
-          aria-selected={tab === 'room'}
-          onClick={() => setTab('room')}
-        >
-          This room
-        </button>
-        <button
-          role="tab"
-          id="tab-people"
-          aria-controls="chat-content"
-          aria-selected={tab === 'people'}
-          onClick={() => setTab('people')}
-          aria-label="People"
-        >
-          <Users size={16} />
-        </button>
+        {TABS.map((item) => (
+          <button
+            key={item}
+            role="tab"
+            id={`tab-${item}`}
+            aria-controls="chat-content"
+            aria-selected={tab === item}
+            tabIndex={tab === item ? 0 : -1}
+            onClick={() => setTab(item)}
+            onFocus={() => setTab(item)}
+            onKeyDown={handleTabKeyDown}
+            aria-label={item === 'people' ? 'People' : undefined}
+          >
+            {item === 'general' ? '# General' : item === 'room' ? 'This room' : <Users size={16} />}
+          </button>
+        ))}
       </div>
       <div className="conversation-context">
         {tab === 'people' ? (
@@ -100,9 +174,23 @@ export const ChatPanel = ({
       <div
         id="chat-content"
         role="tabpanel"
+        tabIndex={0}
         aria-labelledby={`tab-${tab}`}
         className="chat-content"
         ref={scrollRef}
+        onScroll={(event) => {
+          const panel = event.currentTarget;
+          if (!panel.clientHeight || tab === 'people') return;
+          // Appending or switching panels can scroll via layout before the follow frame runs.
+          if (
+            readingRef.current.panel !== panelKey ||
+            readingRef.current.latest !== latestMessageId
+          )
+            return;
+          const follow = panel.scrollHeight - panel.clientHeight - panel.scrollTop <= 48;
+          readingRef.current = { ...readingRef.current, follow };
+          if (follow) setHasNewMessages(false);
+        }}
       >
         {tab === 'people' ? (
           <div className="people-list">
@@ -150,21 +238,7 @@ export const ChatPanel = ({
               aria-relevant="additions"
             >
               {visible.length ? (
-                visible.map((message) => (
-                  <article
-                    className={`message ${message.senderId === self.id ? 'message-self' : ''}`}
-                    key={message.id}
-                  >
-                    <Avatar name={message.name} color={message.color} size="small" />
-                    <div>
-                      <div className="message-meta">
-                        <strong>{message.name}</strong>
-                        <time>{message.sentAt ? formatMessageTime(message.sentAt) : 'sample'}</time>
-                      </div>
-                      <p>{message.text}</p>
-                    </div>
-                  </article>
-                ))
+                <MessageList messages={visible} selfId={self.id} />
               ) : (
                 <div className="chat-empty">
                   <MessageCircle size={29} />
@@ -185,6 +259,16 @@ export const ChatPanel = ({
           </>
         )}
       </div>
+      {tab !== 'people' && hasNewMessages && (
+        <button
+          type="button"
+          className="chat-jump-latest"
+          aria-controls="chat-content"
+          onClick={jumpToLatest}
+        >
+          New messages · Jump to latest
+        </button>
+      )}
       {tab !== 'people' && (
         <form
           className="chat-form"
@@ -192,18 +276,24 @@ export const ChatPanel = ({
             event.preventDefault();
             if (sending) return;
             if (!draft.trim()) {
-              setFormError('Write a message first.');
+              setDraftError('Write a message first.');
               return;
             }
-            const submitted = draft;
+            const submitted = composer;
             setSending(true);
             try {
-              if (await onSend(submitted, channel)) {
-                setDraft((current) => (current === submitted ? '' : current));
-                setFormError('');
+              if (await onSend(submitted.text, channel)) {
+                setDrafts((current) =>
+                  current[draftKey]?.revision === submitted.revision
+                    ? {
+                        ...current,
+                        [draftKey]: { text: '', revision: submitted.revision + 1, error: '' },
+                      }
+                    : current,
+                );
               }
             } catch {
-              setFormError('Message not sent. Please try again.');
+              setDraftError('Message not sent. Please try again.');
             } finally {
               setSending(false);
             }
@@ -224,8 +314,15 @@ export const ChatPanel = ({
               }
               disabled={!canSend}
               onChange={(event) => {
-                setDraft(event.target.value);
-                setFormError('');
+                const text = event.target.value;
+                setDrafts((current) => ({
+                  ...current,
+                  [draftKey]: {
+                    text,
+                    revision: (current[draftKey]?.revision ?? 0) + 1,
+                    error: '',
+                  },
+                }));
               }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -251,7 +348,7 @@ export const ChatPanel = ({
             </div>
           </div>
           <span id="message-error" className="form-error" role="status">
-            {formError}
+            {composer.error}
           </span>
           <p id="message-help">
             {isDemo

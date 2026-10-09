@@ -1,15 +1,15 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowLeft, ArrowUpRight, Check, Circle, GitBranch, Radio } from 'lucide-react';
+import { OfficeReturnLink } from '@/components/office-return-link';
 export const metadata: Metadata = { title: 'Behind the build' };
 export default function CaseStudyPage() {
   return (
     <main className="case-study">
       <nav className="case-nav">
-        <Link href="/" className="case-back">
+        <OfficeReturnLink className="case-back">
           <ArrowLeft size={16} />
           Back to the office
-        </Link>
+        </OfficeReturnLink>
         <span>MODERN OFFICE / ENGINEERING NOTES</span>
       </nav>
       <header className="case-header">
@@ -229,9 +229,9 @@ export default function CaseStudyPage() {
           <p className="eyebrow">TRY THE IMPLEMENTATION</p>
           <h2>Open the workspace.</h2>
         </div>
-        <Link href="/" className="primary-button">
+        <OfficeReturnLink className="primary-button">
           Explore the office <ArrowUpRight size={17} />
-        </Link>
+        </OfficeReturnLink>
       </footer>
     </main>
   );

@@ -4,9 +4,9 @@
 
 1. 打開作品：「這是一個空間型協作工具，不是另一個會議連結列表。進入就能看到完整辦公室。」
 2. 操作角色、切換 Focus room，開 focus mode：「滑鼠、鍵盤和房間快捷入口都能完成同一工作。」
-3. 修改名字、送出訊息：「展示資料有標示，展示訊息只保留本機；不把假在線人數當成真實用戶。」
+3. 修改名字、送出訊息：「Demo 資料有標示，Demo 訊息只保留本機；Live 訊息等待伺服器確認，不把假在線人數當成真實用戶。」
 4. 在公開版 Invite people → Open a second guest，或開兩個瀏覽器視窗，在同一 workspace URL 進入 live mode，示範同步聊天和視訊邀請。另一端同意後才擷取裝置。
-5. 打開 Behind the build：「我不只是换框架，而是把資料驗證、身份來源、生命週期和產品呈現重新拆清楚。」
+5. 打開 Behind the build 再返回原 workspace：「我不只是換框架，而是把資料驗證、身份來源、生命週期和產品呈現重新拆清楚。」返回保留房間與模式，不宣稱保留訪客身份或通話。
 
 ## 可以深入談的決策
 
@@ -35,6 +35,8 @@
 - **少做重複工作，不增加架構。** `Intl.DateTimeFormat` 共用一份，而非每列重建 locale formatter。Bun 1.4 的 2,000 次相同時間格式化，三次本機比較為 188.53／283.26／543.53ms → 5.69／4.60／18.12ms，輸出逐一相同。測試包含 sample marker 與超出 Date 範圍 fallback。這是受當時機器負載影響的微測試，不是 LCP／INP 或整站加速比例。[MDN 說明](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleTimeString) 也建議大量重複格式化時共用 formatter。
 - **廣播一次序列化。** Cloudflare presence 的 unit spy 確認同 workspace 多個收件人只做一次 `JSON.stringify`，payload 一致、其他 workspace 不收。32 人全員 20Hz 移動的靜態模型由 20,480 降到 640 次序列化／秒；這是模型，不是線上壓測，也不減少 incoming WebSocket message 配額。
 - **流程要真的接通。** 在 Demo 按 Open a second guest，原分頁也轉入同一個 live workspace；兩個頁面真人 chat 同步有 regression test，不把開新頁當作功能完成。
+- **聊天不搶走閱讀位置。** 測試 100 則 bounded history、其他 channel 更新、People、手機隱藏／顯示與明確 Jump to latest；也驗證單一 Tab stop、方向鍵、Home／End 和可聚焦 panel。
+- **送達確認不能清錯草稿。** mode／channel 各自保留草稿 revision；測試延遲 ACK、編輯後回到同樣文字，以及實際 hook 在 mode 切換前清理窗口收到匹配 ACK。最後一項刻意注入事件時序，不宣稱自然網路常發生這個順序。
 
 ## 面試前自己練習
 
