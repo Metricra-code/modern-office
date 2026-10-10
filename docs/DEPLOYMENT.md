@@ -80,7 +80,7 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 2026-10-11 手機觸控／媒體按鈕語意改善：`bun run check`（37 個單元測試）、public build、deploy dry-run、50 個 Cloudflare 本機 E2E、50 個公開站 E2E 全數通過。公開版本 `5fa78fb1-cb89-4842-9bda-de9ddbe69db5` 已確認承接 100% 流量，應用程式提交 `88d05fb`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38068636525) 首次執行 47 項 E2E 通過、3 項 production-only 入口／預取測試按設定略過，沒有重試或 flaky。
 
-公開舊版的 320／390px 實測：menu／close 32px、send 27px、zoom 25px；更新後這幾個控制項均為實際 44×44px，1440px 桌面尺寸不變。Chromium touch emulation 在按鈕邊緣操作 menu、三個 zoom、send 和 close，驗證無 overlap／overflow、縮放不移動人物、只送一則訊息及正常關閉 dialog；兩個尺寸與 Focus／媒體控制各連跑三輪通過。另人工檢查辦公室、composer、invite 和通話畫面，320／390px 的鏡頭動作文字正常換行；媒體 regression 驗證原生 synthetic audio／video tracks 的 enabled 切換與 ended 清理。不代表實體手機、真實硬體、完整 WCAG 或所有 NAT 已驗證。
+公開舊版的 320／390px 實測：menu／close 32px、send 27px、zoom 25px；更新後這幾個控制項均為實際 44×44px，1440px 桌面尺寸不變。Chromium touch emulation 在按鈕邊緣操作 menu、三個 zoom、send 和 close，驗證無 overlap／overflow、縮放不移動人物、只送一則訊息及正常關閉 dialog；兩個尺寸與 Focus／媒體控制各連跑三輪通過。另人工檢查辦公室、composer、invite 和通話畫面，320／390px 的通話按鈕列能正常換行，較長的鏡頭動作文字不溢出；媒體 regression 驗證原生 synthetic audio／video tracks 的 enabled 切換與 ended 清理。不代表實體手機、真實硬體、完整 WCAG 或所有 NAT 已驗證。
 
 部署後 23 個 HTML 引用／驗收資產與端點均 HTTP 200，快取策略維持正確；初始 9 scripts 為 187,123 B gzip、地圖仍為 162,696 B。未新增依賴或付費服務，也不將這次小幅 byte 差異宣稱為 LCP／INP 改善。
 
