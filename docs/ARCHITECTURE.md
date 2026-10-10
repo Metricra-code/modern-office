@@ -39,6 +39,8 @@ At widths up to 760px, navigation, message send, dialog close and map zoom have 
 
 **Device controls:** Focus has one stable accessible name and a pressed state reflecting the guest status. Call microphone and camera buttons instead name the next action (Mute/Unmute, Turn camera off/on), without a contradictory pressed state. The separate Test camera action still opens a consent-based device preview; no media capture or signaling boundary changed.
 
+**Video playback:** native `playing` clears manual Play. Only rejected requests for the still-current paused source expose that fallback, so late automatic or manual failures cannot cover a newer playing stream or a successful request on the same stream. Retrying the camera still replaces and stops the previous local stream.
+
 **Profile recovery:** an unsent live profile update leaves the native dialog open, preserves name/color drafts and shows its error inside the modal rather than only behind the backdrop. It does not change the displayed profile. After reconnecting, the same open dialog can retry; profiles remain ephemeral guest state, not durable storage.
 
 Valid 24-character unbroken names wrap in the profile preview, sidebar, Team directory, message author and dialog heading instead of pushing adjacent controls out of view. Map labels still use the first word, but only that word is ellipsized when long, so it cannot inflate the person's invisible button area. You/focusing markers stay outside the clipped text; the full button accessible name and profile value remain unchanged.

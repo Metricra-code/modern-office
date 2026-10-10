@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Play, VideoOff } from 'lucide-react';
 export const VideoTile = ({
   stream,
@@ -14,15 +14,22 @@ export const VideoTile = ({
 }) => {
   const ref = useRef<HTMLVideoElement>(null);
   const [needsPlay, setNeedsPlay] = useState(false);
+  const playVideo = useCallback((video: HTMLVideoElement) => {
+    const source = video.srcObject;
+    void video.play().catch(() => {
+      // A replaced source's late rejection must not cover the current video.
+      if (video.srcObject === source && video.paused) setNeedsPlay(true);
+    });
+  }, []);
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
     video.srcObject = stream ?? null;
-    if (stream) void video.play().catch(() => setNeedsPlay(true));
+    if (stream) playVideo(video);
     return () => {
       video.srcObject = null;
     };
-  }, [stream]);
+  }, [stream, playVideo]);
   return (
     <div className="video-tile">
       <video
@@ -30,6 +37,7 @@ export const VideoTile = ({
         autoPlay
         playsInline
         muted={muted}
+        onPlaying={() => setNeedsPlay(false)}
         aria-label={label}
         className={cameraOff ? 'video-hidden' : ''}
       />
@@ -42,12 +50,9 @@ export const VideoTile = ({
       {needsPlay && (
         <button
           className="video-play"
-          onClick={() =>
-            void ref.current
-              ?.play()
-              .then(() => setNeedsPlay(false))
-              .catch(() => setNeedsPlay(true))
-          }
+          onClick={() => {
+            if (ref.current) playVideo(ref.current);
+          }}
         >
           <Play size={20} />
           Play {label}
