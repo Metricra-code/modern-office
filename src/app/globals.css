@@ -344,10 +344,12 @@ h3 {
 }
 .profile-button > span:nth-child(2) {
   flex: 1;
+  min-width: 0;
 }
 .profile-button strong {
   font-size: 12px;
   display: block;
+  overflow-wrap: anywhere;
 }
 .profile-button > span:nth-child(2) > span {
   display: flex;
@@ -1061,6 +1063,8 @@ kbd {
   padding-top: 3px;
 }
 .message-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 10px;
   font-weight: 700;
 }
@@ -1291,6 +1295,8 @@ kbd {
   margin-bottom: 12px;
 }
 .dialog-heading h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 25px;
   letter-spacing: -0.6px;
   line-height: 1.2;
@@ -1368,6 +1374,10 @@ kbd {
 }
 .profile-preview > span {
   font-size: 12px;
+}
+.profile-preview > span:nth-child(2) {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .profile-preview small {
   display: block;
@@ -1559,10 +1569,12 @@ kbd {
 }
 .team-member > span:nth-child(2) {
   flex: 1;
+  min-width: 0;
 }
 .team-member strong {
   display: block;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .team-member > span > span {
   color: var(--muted);

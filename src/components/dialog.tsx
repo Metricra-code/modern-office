@@ -10,10 +10,27 @@ interface DialogProps {
 }
 export const Dialog = ({ open, title, onClose, children, wide = false }: DialogProps) => {
   const ref = useRef<HTMLDialogElement>(null);
+  const returnContext = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (open) {
-      if (!ref.current?.open) ref.current?.showModal();
-    } else ref.current?.close();
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      returnContext.current =
+        document.activeElement?.parentElement?.closest<HTMLElement>('[tabindex]') ?? null;
+      dialog.showModal();
+    } else if (!open && dialog.open) {
+      dialog.close();
+      // A removed invoker can leave focus inside this closed dialog; keep native return otherwise.
+      let context = returnContext.current;
+      while (
+        context &&
+        (document.activeElement === document.body || dialog.contains(document.activeElement))
+      ) {
+        context.focus({ preventScroll: true });
+        context = context.parentElement?.closest<HTMLElement>('[tabindex]') ?? null;
+      }
+      returnContext.current = null;
+    }
   }, [open]);
   return (
     <dialog
