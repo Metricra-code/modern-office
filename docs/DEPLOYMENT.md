@@ -76,6 +76,8 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 部署後以 curl 核對 23 個 HTML 引用／驗收資產與端點均 HTTP 200，初始化 status 和 inert 已存在公開 HTML；hashed 資產與 HTML／地圖快取策略維持正確。初始 9 scripts 為 187,220 B gzip（上一版 187,148 B，增加 72 B），地圖維持 162,696 B。這不是 bundle 減量或 LCP／INP 加速宣稱；本輪主要減少錯誤 context 的預取並改善使用流程。
 
+後續文件提交的 [CI `cbdb937`](https://github.com/Metricra-code/modern-office/actions/runs/38067025341) 雖顯示 success，鍵盤 tab 測試第一次失敗、retry 才通過，不能當成 clean run。受控暫停 scripts 可重現：SSR 的三個 tabindex 斷言已通過，但 native inert 下 `.focus()` 返回後 activeElement 仍為 BODY，ArrowLeft 不會選到 People；放行並等待 context-ready 後立即可聚焦／切換。只為該測試新增初始化 boundary，保留全部鍵盤斷言、timeout 與 retry；startup regression 同時驗證初始化前鍵盤不能啟動、之後可操作。Bun 開發與 Cloudflare 本機環境的兩個受影響案例各連跑五次通過。公開應用程式不需改動或重新部署。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。

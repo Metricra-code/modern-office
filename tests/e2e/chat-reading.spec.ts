@@ -142,6 +142,7 @@ test('conversation tabs use one tab stop, wrapped arrow navigation and a focusab
   page,
 }) => {
   await page.goto('/?mode=demo');
+  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
   const general = page.getByRole('tab', { name: '# General', exact: true });
   const room = page.getByRole('tab', { name: 'This room', exact: true });
   const people = page.getByRole('tab', { name: 'People', exact: true });

@@ -43,10 +43,21 @@ test('the prerendered office cannot activate stale links before URL context init
     // This preview intentionally cannot finish loading until the script gate is released.
     expect(page.url()).toBe(new URL(`/?workspace=${workspace}&mode=demo`, page.url()).href);
 
+    const general = page.getByRole('tab', { name: '# General', exact: true });
+    const people = page.getByRole('tab', { name: 'People', exact: true });
+    await general.focus();
+    await expect(general).not.toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(people).toHaveAttribute('aria-selected', 'false');
+
     scripts.resolve();
     await expect(shell).not.toHaveAttribute('inert', '');
     await expect(shell).toHaveAttribute('aria-busy', 'false');
     await expect(preparation).toHaveCount(0);
+    await general.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(people).toBeFocused();
+    await expect(people).toHaveAttribute('aria-selected', 'true');
     await expect(notes).toHaveAttribute('href', `/case-study/?workspace=${workspace}&mode=demo`);
     await notes.click();
     await expect(page).toHaveURL(
