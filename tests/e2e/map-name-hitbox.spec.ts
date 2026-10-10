@@ -50,8 +50,52 @@ for (const width of [320, 1440]) {
       expect(floor.x).toBeLessThan(world.x + world.width);
       expect(isWalkable(destination)).toBe(true);
 
+      // [DEBUG-webkit-floor] Temporary native hit-test probe; remove after diagnosis.
+      const beforeTap = await page.evaluate((point) => {
+        const tracked = window as Window & { floorTapEvents?: unknown[] };
+        tracked.floorTapEvents = [];
+        for (const type of ['touchstart', 'click']) {
+          window.addEventListener(
+            type,
+            (event) => {
+              const target = event.target instanceof Element ? event.target : null;
+              const touch = event instanceof TouchEvent ? event.touches[0] : undefined;
+              tracked.floorTapEvents?.push({
+                type,
+                target: target?.className,
+                button: target?.closest('button')?.className,
+                x: touch?.clientX ?? (event as MouseEvent).clientX,
+                y: touch?.clientY ?? (event as MouseEvent).clientY,
+                trusted: event.isTrusted,
+              });
+            },
+            { once: true, capture: true },
+          );
+        }
+        const hit = document.elementFromPoint(point.x, point.y);
+        const person = document.querySelector('.map-person.is-self');
+        return {
+          point,
+          hit: hit?.className,
+          button: hit?.closest('button')?.className,
+          person: person?.getBoundingClientRect().toJSON(),
+          world: document.querySelector('.map-world')?.getBoundingClientRect().toJSON(),
+          cursor: hit ? getComputedStyle(hit).cursor : null,
+          scroll: { x: window.scrollX, y: window.scrollY },
+        };
+      }, floor);
       if (width === 320) await page.touchscreen.tap(floor.x, floor.y);
       else await page.mouse.click(floor.x, floor.y);
+      console.log(
+        '[DEBUG-webkit-floor]',
+        JSON.stringify({
+          beforeTap,
+          afterTap: await page.evaluate(() => ({
+            events: (window as Window & { floorTapEvents?: unknown[] }).floorTapEvents,
+            scroll: { x: window.scrollX, y: window.scrollY },
+          })),
+        }),
+      );
       await expect(page.getByRole('dialog', { name: 'Edit profile' })).not.toBeVisible();
       await expect
         .poll(() => self.evaluate((element) => parseFloat((element as HTMLElement).style.left)))
