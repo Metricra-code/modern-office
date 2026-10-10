@@ -1,11 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import '@fontsource/manrope/latin-400.css';
-import '@fontsource/manrope/latin-500.css';
-import '@fontsource/manrope/latin-600.css';
-import '@fontsource/manrope/latin-700.css';
-import '@fontsource/urbanist/latin-500.css';
-import '@fontsource/urbanist/latin-600.css';
-import '@fontsource/urbanist/latin-700.css';
 import './globals.css';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
