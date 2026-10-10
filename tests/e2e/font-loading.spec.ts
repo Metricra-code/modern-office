@@ -38,17 +38,19 @@ test('two self-hosted variable fonts render the original body and heading typefa
   await cdp.send('CSS.enable');
   const { root } = await cdp.send('DOM.getDocument');
   for (const [selector, family] of [
-    ['.welcome h1', 'Urbanist'],
-    // The variable font's internal family name uses its default 200-weight axis.
-    ['.welcome p', 'Manrope ExtraLight'],
-  ]) {
+    ['.welcome h1', /^Urbanist$/],
+    // CDP reports a platform family name, which may include the default 200-weight label.
+    ['.welcome p', /^Manrope(?: ExtraLight)?$/],
+  ] as const) {
     const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector });
     const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId });
     expect(fonts).toEqual(
-      expect.arrayContaining([expect.objectContaining({ familyName: family, isCustomFont: true })]),
+      expect.arrayContaining([
+        expect.objectContaining({ familyName: expect.stringMatching(family), isCustomFont: true }),
+      ]),
     );
     expect(
-      fonts.find((font: { familyName: string }) => font.familyName === family)?.glyphCount,
+      fonts.find((font: { familyName: string }) => family.test(font.familyName))?.glyphCount,
     ).toBeGreaterThan(0);
   }
   await cdp.detach();
