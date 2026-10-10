@@ -185,6 +185,7 @@ export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
     const { from, signal } = event;
     if (!connected) return;
     if (signal.kind === 'invite') {
+      if (!peers.some((peer) => peer.id === from)) return;
       if (phaseRef.current !== 'idle') {
         if (from !== targetRef.current || signal.callId !== callIdRef.current)
           send(from, { kind: 'decline', callId: signal.callId });
