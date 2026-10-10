@@ -90,6 +90,10 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 部署後 23 個 HTML 引用／驗收資產與端點均 HTTP 200，hashed 資產與 HTML 快取策略維持正確。初始 9 scripts 為 187,306 B gzip（前版 187,123 B），沒有新增依賴或付費服務；本輪修補流程與版面，不宣稱 LCP／INP 或 bundle 減量。
 
+2026-10-11 地圖長名點擊修補：`bun run check`（37 個單元測試）、public build、deploy dry-run、58 個 Cloudflare 本機 E2E、58 個公開站 E2E 通過。公開版本 `36404e98-6281-4182-bd81-3a1297cc3015` 已確認承接 100% 流量，應用程式提交 `1b4b463`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38072341674) 首次執行 55 項 E2E 通過、3 項 production-only 測試按設定略過，沒有重試或 flaky。
+
+320px touch／1440px mouse 的兩個新回歸各連跑三輪通過：人物旁的合法地面點擊不再被長名撐大的透明按鈕攔截，實際位置到達目標；再點人物仍開啟完整 profile，You／專注標記保留。公開 320／390／1440px 畫面已檢視，短名的尺寸、字型與顏色不變；仍保留人物原本的最小點擊區，不宣稱消除所有透明空隙或已驗證實體手機。部署後 23 個資產／端點均 HTTP 200、快取策略正確；初始 9 scripts 為 187,321 B gzip（前版 187,306 B）。沒有新增依賴或付費服務，不宣稱 LCP／INP 改善。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
