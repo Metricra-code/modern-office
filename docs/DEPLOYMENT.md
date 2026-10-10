@@ -84,6 +84,12 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 部署後 23 個 HTML 引用／驗收資產與端點均 HTTP 200，快取策略維持正確；初始 9 scripts 為 187,123 B gzip、地圖仍為 162,696 B。未新增依賴或付費服務，也不將這次小幅 byte 差異宣稱為 LCP／INP 改善。
 
+2026-10-11 長名稱／離線 dialog 焦點改善：`bun run check`（37 個單元測試）、public build、deploy dry-run、56 個 Cloudflare 本機 E2E、56 個公開站 E2E 全數通過。公開版本 `d481be37-a677-4bef-9688-3e74c69ccbc0` 已確認承接 100% 流量，應用程式提交 `74ef12d`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38070879343) 首次執行 53 項 E2E 通過、3 項 production-only 入口／預取測試按設定略過，沒有重試或 flaky。
+
+六個新回歸在 Bun 開發環境各連跑三輪通過：320×480／568×320 的完整長名稱仍可儲存／同步，profile、sidebar、Team、聊天作者和 dialog 標題不再撐出相鄰控制；Close 在自動捲動前就位於 dialog／viewport 內。真人離開後，native close 若仍留焦點在已關閉 dialog，才回到地圖／People；People 因手機尺寸隱藏時退到 main。Incoming 疊在未儲存 profile 上，Decline 後原 input 焦點與草稿保留；兩條原生 synthetic tracks 在 caller context 仍開啟時已 ended。Cloudflare 本機的正常桌面工作台／invite 與上述兩種小尺寸畫面亦已檢視，未見整頁或 dialog 水平溢出。不代表其他瀏覽器、實體手機、作業系統鍵盤、真實硬體或所有 NAT 已驗證。
+
+部署後 23 個 HTML 引用／驗收資產與端點均 HTTP 200，hashed 資產與 HTML 快取策略維持正確。初始 9 scripts 為 187,306 B gzip（前版 187,123 B），沒有新增依賴或付費服務；本輪修補流程與版面，不宣稱 LCP／INP 或 bundle 減量。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
