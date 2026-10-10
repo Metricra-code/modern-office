@@ -16,48 +16,50 @@ const observedTracks = (page: Page) =>
       .sort(),
   );
 
-test('a departed map profile returns keyboard focus to the interactive office on Escape', async ({
-  browser,
-}) => {
-  const first = await browser.newContext();
-  const second = await browser.newContext();
-  const alice = await first.newPage();
-  const bob = await second.newPage();
-  try {
-    const workspace = `focus-profile-${Date.now()}`;
-    await join(alice, workspace, 'Alice');
-    await join(bob, workspace, 'Bob');
-    const trigger = alice.getByRole('button', {
-      name: 'Bob in studio',
-      exact: true,
-      includeHidden: true,
-    });
-    await expect(trigger).toBeVisible();
-    await trigger.focus();
-    await expect(trigger).toBeFocused();
-    await alice.keyboard.press('Enter');
-    const profile = alice.getByRole('dialog', { name: 'Bob', exact: true });
-    await expect(profile).toBeVisible();
-    await expect(trigger).toHaveCount(1);
+test(
+  'a departed map profile returns keyboard focus to the interactive office on Escape',
+  { tag: '@browser-smoke' },
+  async ({ browser }) => {
+    const first = await browser.newContext();
+    const second = await browser.newContext();
+    const alice = await first.newPage();
+    const bob = await second.newPage();
+    try {
+      const workspace = `focus-profile-${Date.now()}`;
+      await join(alice, workspace, 'Alice');
+      await join(bob, workspace, 'Bob');
+      const trigger = alice.getByRole('button', {
+        name: 'Bob in studio',
+        exact: true,
+        includeHidden: true,
+      });
+      await expect(trigger).toBeVisible();
+      await trigger.focus();
+      await expect(trigger).toBeFocused();
+      await alice.keyboard.press('Enter');
+      const profile = alice.getByRole('dialog', { name: 'Bob', exact: true });
+      await expect(profile).toBeVisible();
+      await expect(trigger).toHaveCount(1);
 
-    // Closing the other context produces a real WebSocket departure, not a synthetic frame.
-    await second.close();
-    await expect(trigger).toHaveCount(0);
-    await expect(profile.getByRole('status')).toHaveText('This guest has left the workspace.');
-    await expect(profile.getByRole('button', { name: 'Start a video call' })).toBeDisabled();
-    await expect(profile).toBeVisible();
-    await expect(profile.getByRole('button', { name: 'Close dialog' })).toBeFocused();
-    await alice.keyboard.press('Escape');
-    await expect(alice.getByRole('dialog')).not.toBeVisible();
+      // Closing the other context produces a real WebSocket departure, not a synthetic frame.
+      await second.close();
+      await expect(trigger).toHaveCount(0);
+      await expect(profile.getByRole('status')).toHaveText('This guest has left the workspace.');
+      await expect(profile.getByRole('button', { name: 'Start a video call' })).toBeDisabled();
+      await expect(profile).toBeVisible();
+      await expect(profile.getByRole('button', { name: 'Close dialog' })).toBeFocused();
+      await alice.keyboard.press('Escape');
+      await expect(alice.getByRole('dialog')).not.toBeVisible();
 
-    const office = alice.getByRole('group', { name: /Interactive office/ });
-    await expect(office).toBeVisible();
-    await expect(office).toBeFocused();
-  } finally {
-    await first.close();
-    await second.close();
-  }
-});
+      const office = alice.getByRole('group', { name: /Interactive office/ });
+      await expect(office).toBeVisible();
+      await expect(office).toBeFocused();
+    } finally {
+      await first.close();
+      await second.close();
+    }
+  },
+);
 
 test('a departed outgoing call stops native tracks and returns keyboard focus to People', async ({
   browser,

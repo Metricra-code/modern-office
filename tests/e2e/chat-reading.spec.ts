@@ -138,34 +138,36 @@ test('People does not scroll when a chat message arrives and switching panels re
   await expect.poll(() => panel.evaluate((element) => element.scrollTop)).toBe(0);
 });
 
-test('conversation tabs use one tab stop, wrapped arrow navigation and a focusable matching panel', async ({
-  page,
-}) => {
-  await page.goto('/?mode=demo');
-  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
-  const general = page.getByRole('tab', { name: '# General', exact: true });
-  const room = page.getByRole('tab', { name: 'This room', exact: true });
-  const people = page.getByRole('tab', { name: 'People', exact: true });
-  await expect(general).toHaveAttribute('tabindex', '0');
-  await expect(room).toHaveAttribute('tabindex', '-1');
-  await expect(people).toHaveAttribute('tabindex', '-1');
-  await general.focus();
-  await page.keyboard.press('ArrowLeft');
-  await expect(people).toBeFocused();
-  await expect(people).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('Home');
-  await expect(general).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(room).toBeFocused();
-  await page.keyboard.press('End');
-  await expect(people).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect(general).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('tabpanel')).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-general');
-  await expect(general).toHaveAttribute('aria-controls', 'chat-content');
-});
+test(
+  'conversation tabs use one tab stop, wrapped arrow navigation and a focusable matching panel',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.goto('/?mode=demo');
+    await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
+    const general = page.getByRole('tab', { name: '# General', exact: true });
+    const room = page.getByRole('tab', { name: 'This room', exact: true });
+    const people = page.getByRole('tab', { name: 'People', exact: true });
+    await expect(general).toHaveAttribute('tabindex', '0');
+    await expect(room).toHaveAttribute('tabindex', '-1');
+    await expect(people).toHaveAttribute('tabindex', '-1');
+    await general.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(people).toBeFocused();
+    await expect(people).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Home');
+    await expect(general).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(room).toBeFocused();
+    await page.keyboard.press('End');
+    await expect(people).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(general).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('tabpanel')).toBeFocused();
+    await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-general');
+    await expect(general).toHaveAttribute('aria-controls', 'chat-content');
+  },
+);
 
 test('drafts stay with their channel when switching tabs and rooms', async ({ page }) => {
   await page.goto('/?mode=demo');

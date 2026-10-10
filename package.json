@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test tests/unit",
     "test:e2e": "playwright test",
+    "test:browser-smoke": "playwright test --config=playwright.cross-browser.config.ts",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

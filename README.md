@@ -68,6 +68,17 @@ bun run build
 
 `bun test` 和 `bun run test` 均只執行 `tests/unit`（由 `bunfig.toml` 設定）。完整品質檢查可執行 `bun run check`；E2E 另跑。
 
+### 跨瀏覽器核心流程
+
+```bash
+bun ./node_modules/playwright/cli.js install firefox webkit
+bun run test:browser-smoke
+```
+
+沿用標記為 `@browser-smoke` 的核心案例，分別使用 Firefox／WebKit 引擎與對應 device descriptor；涵蓋免註冊雙訪客、真人聊天、地圖、手機版導覽與鍵盤焦點。沒有相機 mock、CDP 或新測試框架；原有 Chromium 完整 E2E 仍獨立執行。預設自動 build 公開版並啟動本機 Cloudflare runtime（3103），不需雲端登入；本機若已有 3103 server 會沿用而不重建，請先確認它是最新公開版。也可用 `PLAYWRIGHT_BASE_URL` 指向已建置的公開版。
+
+GitHub CI 在 Ubuntu 執行兩個引擎，不等於 Safari／iPhone 實機或跨 NAT 視訊驗證。Playwright 1.59 起已[移除 macOS 14 的 WebKit 支援](https://playwright.dev/docs/release-notes#version-159)；本機 macOS 14 請用 `bun run test:browser-smoke --project=firefox`，不要把 WebKit 啟動失敗算成通過。
+
 ```bash
 bun run build
 bun start          # 以 Bun 靜態伺服器預覽 out/，不是 next start

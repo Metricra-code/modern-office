@@ -12,44 +12,62 @@ const enterLive = async (page: Page, workspace: string) => {
   await expect(page.getByText('Live workspace', { exact: true })).toBeVisible();
 };
 
-test('demo: profile, keyboard movement, room selection and local chat', async ({ page }) => {
-  await page.goto('/?mode=demo');
-  await expect(page.getByRole('heading', { name: 'Office', exact: true })).toBeVisible();
-  await openProfile(page, 'Interview Guest');
-  await expect(page.getByRole('button', { name: 'Interview Guest, you in studio' })).toBeVisible();
-  const map = page.getByRole('group', { name: /Interactive office/ });
-  const avatar = page.getByRole('button', { name: /^Interview Guest, you in/ });
-  const before = await avatar.boundingBox();
-  await map.focus();
-  await page.keyboard.down('ArrowRight');
-  await page.waitForTimeout(160);
-  await page.keyboard.up('ArrowRight');
-  expect((await avatar.boundingBox())!.x).toBeGreaterThan(before!.x);
-  await page.getByRole('button', { name: 'Go to Lounge' }).click();
-  await expect(page.getByRole('button', { name: 'Interview Guest, you in lounge' })).toBeVisible();
-  await page.getByLabel('Message general').fill('A thoughtful workspace.');
-  await page.getByRole('button', { name: 'Send message' }).click();
-  await expect(page.getByRole('log')).toContainText('A thoughtful workspace.');
-  await page.getByRole('tab', { name: 'This room' }).click();
-  await page.getByLabel('Message lounge').fill('Hello lounge');
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('log')).toContainText('Hello lounge');
-  await expect(page.getByRole('log')).not.toContainText('A thoughtful workspace.');
-});
+test(
+  'demo: profile, keyboard movement, room selection and local chat',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.goto('/?mode=demo');
+    await expect(page.getByRole('heading', { name: 'Office', exact: true })).toBeVisible();
+    await openProfile(page, 'Interview Guest');
+    await expect(
+      page.getByRole('button', { name: 'Interview Guest, you in studio' }),
+    ).toBeVisible();
+    const map = page.getByRole('group', { name: /Interactive office/ });
+    const avatar = page.getByRole('button', { name: /^Interview Guest, you in/ });
+    const before = await avatar.boundingBox();
+    await map.focus();
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(160);
+    await page.keyboard.up('ArrowRight');
+    expect((await avatar.boundingBox())!.x).toBeGreaterThan(before!.x);
+    await page.getByRole('button', { name: 'Go to Lounge' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Interview Guest, you in lounge' }),
+    ).toBeVisible();
+    await page.getByLabel('Message general').fill('A thoughtful workspace.');
+    await page.getByRole('button', { name: 'Send message' }).click();
+    await expect(page.getByRole('log')).toContainText('A thoughtful workspace.');
+    await page.getByRole('tab', { name: 'This room' }).click();
+    await page.getByLabel('Message lounge').fill('Hello lounge');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('log')).toContainText('Hello lounge');
+    await expect(page.getByRole('log')).not.toContainText('A thoughtful workspace.');
+  },
+);
 
-test('native dialogs trap focus, escape closes, sample calls are honest', async ({ page }) => {
-  await page.goto('/?mode=demo');
-  await page.getByRole('button', { name: 'Mia Chen in studio' }).click();
-  await expect(page.getByRole('dialog')).toContainText('sample teammate, not a real person online');
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).not.toBeVisible();
-  await page.getByRole('button', { name: 'Invite people', exact: true }).click();
-  await expect(page.getByLabel('Workspace link')).toHaveValue(/workspace=office-/);
-  await page.keyboard.press('Tab');
-  expect(await page.evaluate(() => Boolean(document.activeElement?.closest('dialog')))).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Invite people', exact: true })).toBeFocused();
-});
+test(
+  'native dialogs trap focus, escape closes, sample calls are honest',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.goto('/?mode=demo');
+    await page.getByRole('button', { name: 'Mia Chen in studio' }).click();
+    await expect(page.getByRole('dialog')).toContainText(
+      'sample teammate, not a real person online',
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    const invite = page.getByRole('button', { name: 'Invite people', exact: true });
+    await invite.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByLabel('Workspace link')).toHaveValue(/workspace=office-/);
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => Boolean(document.activeElement?.closest('dialog')))).toBe(
+      true,
+    );
+    await page.keyboard.press('Escape');
+    await expect(invite).toBeFocused();
+  },
+);
 
 test('two guests sync chat, presence, video consent and cleanup', async ({ browser }) => {
   const first = await browser.newContext({ permissions: ['camera', 'microphone'] });
@@ -115,25 +133,29 @@ test('two guests sync chat, presence, video consent and cleanup', async ({ brows
   await first.close();
 });
 
-test('mobile controls remain usable without horizontal page overflow', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/?mode=demo');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  );
-  await page.getByRole('button', { name: 'Go to Focus room' }).click();
-  await page.getByRole('button', { name: /^Conversations/ }).click();
-  await page.getByLabel('Message general').fill('Mobile hello');
-  await page.getByRole('button', { name: 'Send message' }).click();
-  await expect(page.getByRole('log')).toContainText('Mobile hello');
-  await page.getByRole('button', { name: 'Open navigation' }).click();
-  await page.getByRole('button', { name: /^Team/ }).click();
-  await page
-    .locator('.mobile-workspace-tabs')
-    .getByRole('button', { name: 'Team', exact: true })
-    .click();
-  await expect(page.getByRole('heading', { name: 'Workspace members' })).toBeVisible();
-});
+test(
+  'mobile controls remain usable without horizontal page overflow',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/?mode=demo');
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await page.getByRole('button', { name: 'Go to Focus room' }).click();
+    await page.getByRole('button', { name: /^Conversations/ }).click();
+    await page.getByLabel('Message general').fill('Mobile hello');
+    await page.getByRole('button', { name: 'Send message' }).click();
+    await expect(page.getByRole('log')).toContainText('Mobile hello');
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await page.getByRole('button', { name: /^Team/ }).click();
+    await page
+      .locator('.mobile-workspace-tabs')
+      .getByRole('button', { name: 'Team', exact: true })
+      .click();
+    await expect(page.getByRole('heading', { name: 'Workspace members' })).toBeVisible();
+  },
+);
 
 test('desktop and mobile meet automated accessibility checks', async ({ page }) => {
   for (const width of [1440, 390]) {
@@ -151,26 +173,28 @@ test('desktop and mobile meet automated accessibility checks', async ({ page }) 
   ).toEqual([]);
 });
 
-test('map has no focus frame while keyboard movement retains a visible instruction cue', async ({
-  page,
-}) => {
-  await page.goto('/?mode=demo');
-  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
-  const map = page.getByRole('group', { name: /Interactive office/ });
-  const world = page.locator('.map-world');
-  const bounds = (await world.boundingBox())!;
-  await page.mouse.click(
-    bounds.x + bounds.width * (400 / 900),
-    bounds.y + bounds.height * (315 / 570),
-  );
-  await expect(map).toBeFocused();
-  await expect(map).toHaveCSS('outline-style', 'none');
-  await page.keyboard.press('Tab');
-  await map.focus();
-  expect(await map.evaluate((element) => element.matches(':focus-visible'))).toBe(true);
-  await expect(map).toHaveCSS('outline-style', 'none');
-  await expect(page.locator('#map-instructions')).not.toHaveCSS('box-shadow', 'none');
-});
+test(
+  'map has no focus frame while keyboard movement retains a visible instruction cue',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.goto('/?mode=demo');
+    await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
+    const map = page.getByRole('group', { name: /Interactive office/ });
+    const world = page.locator('.map-world');
+    const bounds = (await world.boundingBox())!;
+    await page.mouse.click(
+      bounds.x + bounds.width * (400 / 900),
+      bounds.y + bounds.height * (315 / 570),
+    );
+    await expect(map).toBeFocused();
+    await expect(map).toHaveCSS('outline-style', 'none');
+    await page.keyboard.press('Tab');
+    await map.focus();
+    expect(await map.evaluate((element) => element.matches(':focus-visible'))).toBe(true);
+    await expect(map).toHaveCSS('outline-style', 'none');
+    await expect(page.locator('#map-instructions')).not.toHaveCSS('box-shadow', 'none');
+  },
+);
 
 test('a rejected chat acknowledgement preserves the draft for retry', async ({ page }) => {
   await page.routeWebSocket(/\/office(?:\?|$)/, (socket) => {
@@ -198,39 +222,43 @@ test('a rejected chat acknowledgement preserves the draft for retry', async ({ p
   await expect(page.getByRole('log')).not.toContainText('Keep this message for retry');
 });
 
-test('furniture is passable while walls and map zoom controls remain usable', async ({ page }) => {
-  await page.goto('/?mode=demo');
-  await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
-  const world = page.locator('.map-world');
-  const self = page.locator('.map-person.is-self');
-  const clickWorldPoint = async (x: number, y: number) => {
-    const bounds = (await world.boundingBox())!;
-    await page.mouse.click(
-      bounds.x + (bounds.width * x) / 900,
-      bounds.y + (bounds.height * y) / 570,
+test(
+  'furniture is passable while walls and map zoom controls remain usable',
+  { tag: '@browser-smoke' },
+  async ({ page }) => {
+    await page.goto('/?mode=demo');
+    await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
+    const world = page.locator('.map-world');
+    const self = page.locator('.map-person.is-self');
+    const clickWorldPoint = async (x: number, y: number) => {
+      const bounds = (await world.boundingBox())!;
+      await page.mouse.click(
+        bounds.x + (bounds.width * x) / 900,
+        bounds.y + (bounds.height * y) / 570,
+      );
+    };
+    const initialPosition = (await self.getAttribute('style'))!;
+    await clickWorldPoint(400, 315);
+    await expect(self).not.toHaveAttribute('style', initialPosition);
+    const movedPosition = (await self.getAttribute('style'))!;
+    await clickWorldPoint(216, 140);
+    await expect(self).not.toHaveAttribute('style', movedPosition);
+    await expect(page.locator('.map-shell').getByRole('status')).not.toBeVisible();
+    const furniturePosition = (await self.getAttribute('style'))!;
+    await clickWorldPoint(468, 150);
+    await expect(page.locator('.map-shell').getByRole('status')).toHaveText(
+      'Choose a spot inside the office, away from walls.',
     );
-  };
-  const initialPosition = (await self.getAttribute('style'))!;
-  await clickWorldPoint(400, 315);
-  await expect(self).not.toHaveAttribute('style', initialPosition);
-  const movedPosition = (await self.getAttribute('style'))!;
-  await clickWorldPoint(216, 140);
-  await expect(self).not.toHaveAttribute('style', movedPosition);
-  await expect(page.locator('.map-shell').getByRole('status')).not.toBeVisible();
-  const furniturePosition = (await self.getAttribute('style'))!;
-  await clickWorldPoint(468, 150);
-  await expect(page.locator('.map-shell').getByRole('status')).toHaveText(
-    'Choose a spot inside the office, away from walls.',
-  );
-  await expect(self).toHaveAttribute('style', furniturePosition);
+    await expect(self).toHaveAttribute('style', furniturePosition);
 
-  const originalWidth = (await world.boundingBox())!.width;
-  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth * 1.1, 0);
-  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-  expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth, 0);
-  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-  expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth * 0.9, 0);
-  await page.getByRole('button', { name: 'Reset map zoom', exact: true }).click();
-  expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth, 0);
-});
+    const originalWidth = (await world.boundingBox())!.width;
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth * 1.1, 0);
+    await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+    expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth, 0);
+    await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+    expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth * 0.9, 0);
+    await page.getByRole('button', { name: 'Reset map zoom', exact: true }).click();
+    expect((await world.boundingBox())!.width).toBeCloseTo(originalWidth, 0);
+  },
+);
