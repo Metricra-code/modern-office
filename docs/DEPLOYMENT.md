@@ -64,6 +64,12 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 部署後以 curl 核對 32 個 HTML 引用／驗收資產與端點，均 HTTP 200，公開 HTML 含初始化保護；hashed 資產／HTML 快取策略維持正確。現代瀏覽器初始 9 scripts 為 187,161 B gzip，地圖維持 162,696 B，這不是整站加速比例或實際瀏覽器總下載量。公開版本的獨立診斷使用 100 則訊息與合法模擬 WebSocket：100 次移動、101 次移動＋own-echo 均不重複存取 timestamp formatter，聊天／插畫 DOM mutations 與 movement interval 重裝也為 0。三輪 CPU 比較與負載限制記錄於 `docs/INTERVIEW.md`；不宣稱 LCP／INP 或所有 NAT 已驗證。
 
+2026-10-10 手機導覽／斷線 profile／字型載入改善後：`bun run check`（37 個單元測試）、public build、deploy dry-run、42 個 Cloudflare 本機 E2E、42 個公開站 E2E 通過。公開版本 `261ba8ab-45bd-418b-9269-47c7d2bbd492` 已確認承接 100% 流量，應用程式提交 `6256280`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38064832596) 首次執行 41 項 E2E 通過、1 項 public-only 入口按設定略過，沒有重試或 flaky。手機從 Conversations 選 Team／Office 會顯示目標內容；離線 profile 保留姓名／顏色草稿、在 modal 內提示，重連後原視窗可重試。
+
+部署後以 curl 檢查 23 個 HTML 引用／驗收資產、health 與授權 notices，全數 HTTP 200；兩個字型和三份公開授權與本機檔案逐 byte 相同。Hashed 字型維持一年 immutable，HTML／地圖維持可重新驗證。沒有新增 npm 依賴、外部 runtime 字型請求或付費服務；兩個不再使用的 Fontsource packages 已移除。這不是跨 NAT 或完整 WCAG 認證，既有開發工具鏈警示仍須追蹤。
+
+桌機／手機各三輪 cold-load，before 和 after 每版各六次，實際字型請求每輪由 7 → 2、字型 body 由 92,724 → 52,588 B；維持原本字型與字重。手機 LCP 中位數並未改善，量測數據與限制記錄於 `docs/INTERVIEW.md`，不以字型 bytes 減量代替全站性能宣稱。公開桌機與手機畫面亦已檢視，沒有明顯字型 fallback、控制項重疊或整頁 overflow。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。

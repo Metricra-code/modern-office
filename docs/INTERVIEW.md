@@ -39,6 +39,22 @@
 - **送達確認不能清錯草稿。** mode／channel 各自保留草稿 revision；測試延遲 ACK、編輯後回到同樣文字，以及實際 hook 在 mode 切換前清理窗口收到匹配 ACK。最後一項刻意注入事件時序，不宣稱自然網路常發生這個順序。
 - **先量測再 memo。** 固定 100 則訊息、20Hz 鍵盤移動與模擬 WebSocket own-echo，三輪 Chromium CDP Script CPU 中位數為 2.923 → 1.669 ms／實際 move；獨立診斷確認 101 次移動的 timestamp formatter 存取由 20,200 次降到 0。比較版本為 `448f56e` → `bec39fb`；0 訊息控制組也下降，before 範圍 2.193–3.787 ms／move，不能將全部差異歸因 memo。兩版均無長任務或聊天 DOM 寫入、frame p95 同為 16.7–16.8ms；這證明減少重複工作，不代表整站速度或 INP 改善。
 - **初始化不是假可操作。** 靜態輸出的辦公室在 URL context 初始化前用原生 inert 阻止互動，避免慢速 JavaScript 載入時跳到預設房間。Regression 刻意暫停 script 請求，實際點擊 footer 不能啟動 stale link；放行後才驗證原 workspace／mode 與案例頁往返。這不是把 retry 成功當成修復。
+- **驗證內容可見，而非只看導覽標籤。** 手機從 Conversations 用抽屜切到 Team，曾出現 breadcrumb 正確但 Directory 被舊 mobile tab 隱藏；regression 先重現 hidden，再驗證 Team 和 Office 兩條入口真正顯示內容。只需同步現有 tab state，不增加導覽框架。
+- **失敗提示要在操作所在的視窗。** Live 斷線時 profile 不能送出，原本只顯示被 native dialog 擋在背景的提示。測試關閉真正的 client socket、暫時拒絕重連，驗證 modal 內錯誤、姓名／顏色草稿保留與 profile 未假更新；允許原生重連後，同一個未關閉的 modal 能重新儲存。
+- **字型只載入需要的檔案，不犧牲設計。** 同樣的 Manrope／Urbanist 與字重改用兩個固定本機 variable WOFF2，移除兩個 Fontsource dependencies。公開站 `260bb43` → `6256280`，桌機 1440×1000／手機 viewport 390×844 各三輪 fresh context，實際字型請求每輪均由 7 → 2，`encodedBodySize` 總和由 92,724 → 52,588 B，少 40,136 B（43.3% **字型 bytes**，不是全站比例）。Browser regression 同時驗證 loaded faces／ranges、兩個同源請求與 CDP 實際 rendered glyph，沒有把 CSS 宣告成功當成字型載入成功。
+
+### 字型改善的 cold-load 限制
+
+上述量測使用 Chromium、關閉 browser cache、150ms 網路 latency、200,000 B/s download、93,750 B/s upload 與相對主機 CPU 4× throttle；每版桌機／手機各三輪，公開 edge cache、主機負載與 TTFB 未控制，不是實體手機或 field Core Web Vitals。
+
+| 三輪中位數     | before 桌機 | after 桌機 | before 手機 | after 手機 |
+| -------------- | ----------- | ---------- | ----------- | ---------- |
+| LCP（ms）      | 4,740       | 2,644      | 2,968       | 3,564      |
+| Startup CLS    | 0.000726    | 0.001816   | 0.000379    | 0.000390   |
+| Font requests  | 7           | 2          | 7           | 2          |
+| Font body（B） | 92,724      | 52,588     | 92,724      | 52,588     |
+
+LCP candidate 仍是地圖，手機中位數反而較高；before 手機 2,692–4,100ms 與 after 2,868–3,608ms 範圍重疊，因此只宣稱確定的下載量減少，不把時間差全部歸因字型，也不宣稱 LCP／CLS 改善。Startup CLS 按 [官方 session-window 定義](https://web.dev/articles/cls) 從原始 layout-shift entries 計算，排除 recent input，取相鄰小於一秒、總長小於五秒窗口的最大值，而非把整次載入加總。所有十二次載入均無 page errors 或整頁 overflow；沒有互動樣本，不能推論 INP。
 
 ## 面試前自己練習
 
