@@ -48,6 +48,56 @@ test('camera denial is recoverable and never starts a microphone', async ({ page
   await expect(page.getByRole('log')).toContainText('Still able to chat');
 });
 
+test('saving a profile while disconnected explains the failure inside the dialog and keeps changes', async ({
+  page,
+}) => {
+  let disconnected = false;
+  let disconnect: (() => Promise<void>) | undefined;
+  await page.routeWebSocket(/\/office(?:\?|$)/, async (socket) => {
+    if (disconnected) {
+      await socket.close();
+      return;
+    }
+    socket.connectToServer();
+    disconnect = async () => {
+      disconnected = true;
+      await socket.close({ code: 1000, reason: 'Controlled profile disconnect' });
+    };
+  });
+  await page.goto(`/?workspace=profile-offline-${Date.now()}&mode=live`);
+  await expect(page.getByText('Live workspace', { exact: true })).toBeVisible();
+  const originalName = await page.locator('.profile-button strong').innerText();
+  const avatar = page.locator('.profile-button .avatar');
+  const originalAvatarClass = (await avatar.getAttribute('class'))!;
+  expect(disconnect).toBeDefined();
+  await disconnect!();
+  await expect(page.getByText('Live workspace', { exact: true })).not.toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit your profile' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit profile' });
+  await dialog.getByLabel('Your name', { exact: true }).fill('Interview guest');
+  await dialog.getByRole('radio', { name: 'plum', exact: true }).check();
+  await dialog.getByRole('button', { name: 'Save profile' }).click();
+  await expect(dialog.getByRole('status')).toHaveText(
+    'Reconnect to save your profile. Your changes are still here.',
+  );
+  await expect(dialog.getByLabel('Your name', { exact: true })).toHaveValue('Interview guest');
+  await expect(dialog.getByRole('radio', { name: 'plum', exact: true })).toBeChecked();
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('.profile-button strong')).toHaveText(originalName);
+  await expect(avatar).toHaveClass(originalAvatarClass);
+
+  disconnected = false;
+  await expect(page.getByText('Live workspace', { exact: true })).toBeVisible();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Your name', { exact: true })).toHaveValue('Interview guest');
+  await expect(dialog.getByRole('radio', { name: 'plum', exact: true })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Save profile' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator('.profile-button strong')).toHaveText('Interview guest');
+  await expect(avatar).toHaveClass(/avatar-plum/);
+});
+
 test('responsive screenshots have no runtime errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

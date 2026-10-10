@@ -198,6 +198,7 @@ export const Workspace = () => {
         view={view}
         onView={(next) => {
           setView(next);
+          setMobileTab('space');
           setMobileNavigation(false);
         }}
         onRoom={visitRoom}
@@ -463,6 +464,7 @@ export const Workspace = () => {
               return;
             }
             if (office.saveProfile({ name: draftName, color: draftColor })) closeDialog();
+            else setProfileError('Reconnect to save your profile. Your changes are still here.');
           }}
         >
           <label htmlFor="display-name">Your name</label>

@@ -40,6 +40,28 @@ test('resizing an open mobile drawer to desktop removes background inert', async
   await expect(page.getByRole('button', { name: 'Invite people', exact: true })).toBeEnabled();
 });
 
+test('mobile navigation leaves Conversations to show the selected Team or Office view', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/?mode=demo');
+  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
+  await page.getByRole('button', { name: /^Conversations/ }).click();
+  await expect(page.getByRole('complementary', { name: 'Team conversations' })).toBeVisible();
+
+  const navigation = page.locator('#workspace-nav');
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await navigation.getByRole('button', { name: /^Team/ }).click();
+  await expect(page.locator('.team-directory')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Directory', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /^Conversations/ }).click();
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await navigation.getByRole('button', { name: /^Office/ }).click();
+  await expect(page.getByRole('group', { name: /Interactive office/ })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Team conversations' })).not.toBeVisible();
+});
+
 test('opening a second guest from demo joins both pages to the same live workspace', async ({
   page,
 }) => {
