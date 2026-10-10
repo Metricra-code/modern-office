@@ -33,6 +33,7 @@ interface SidebarProps {
   onInvite: () => void;
   onHelp: () => void;
   isDemo: boolean;
+  initialized: boolean;
 }
 export const Sidebar = ({
   self,
@@ -46,10 +47,12 @@ export const Sidebar = ({
   onInvite,
   onHelp,
   isDemo,
+  initialized,
 }: SidebarProps) => (
   <aside id="workspace-nav" className="sidebar" aria-label="Workspace navigation">
     <Link
       href={workspaceRoute('office', workspace, isDemo ? 'demo' : 'live')}
+      prefetch={initialized ? null : false}
       className="brand"
       aria-label="Modern Office home"
     >
@@ -80,7 +83,10 @@ export const Sidebar = ({
         <Users size={18} />
         Team<span className="nav-number">{players.length}</span>
       </button>
-      <Link href={workspaceRoute('notes', workspace, isDemo ? 'demo' : 'live')}>
+      <Link
+        href={workspaceRoute('notes', workspace, isDemo ? 'demo' : 'live')}
+        prefetch={initialized ? null : false}
+      >
         <BookOpen size={18} />
         Engineering notes
         <ArrowUpRight size={14} />

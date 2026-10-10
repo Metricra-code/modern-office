@@ -128,7 +128,10 @@ test('mobile controls remain usable without horizontal page overflow', async ({ 
   await expect(page.getByRole('log')).toContainText('Mobile hello');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page.getByRole('button', { name: /^Team/ }).click();
-  await page.getByRole('button', { name: 'Office', exact: true }).click();
+  await page
+    .locator('.mobile-workspace-tabs')
+    .getByRole('button', { name: 'Team', exact: true })
+    .click();
   await expect(page.getByRole('heading', { name: 'Workspace members' })).toBeVisible();
 });
 
