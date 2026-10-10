@@ -43,6 +43,7 @@
 - **來電也可能晚於離開。** 同一 JavaScript task 透過真正 hook client 同步注入合法 invite 與 caller-removal presence，先重現仍出現 A guest is calling，再驗證[Effect Event 的最新 committed 值](https://react.dev/reference/react/useEffectEvent)所提供的 peer list 阻止過期來電、保留 Live 且沒有媒體 capture。這是刻意建立的 React batching regression，不宣稱測得自然網路發生率。
 - **驗證內容可見，而非只看導覽標籤。** 手機從 Conversations 用抽屜切到 Team，曾出現 breadcrumb 正確但 Directory 被舊 mobile tab 隱藏；regression 先重現 hidden，再驗證 Team 和 Office 兩條入口真正顯示內容。只需同步現有 tab state，不增加導覽框架。
 - **失敗提示要在操作所在的視窗。** Live 斷線時 profile 不能送出，原本只顯示被 native dialog 擋在背景的提示。測試關閉真正的 client socket、暫時拒絕重連，驗證 modal 內錯誤、姓名／顏色草稿保留與 profile 未假更新；允許原生重連後，同一個未關閉的 modal 能重新儲存。
+- **操作語意與真實結果一致。** 依 [WAI Button Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/)，Focus 用固定名稱與 pressed；Mute／Unmute、鏡頭開／關則顯示下一步動作，不混用 pressed。雙 guest regression 觀察原生假裝置 tracks，驗證 audio／video 的 enabled 雙向切換、互不影響及掛斷後 ended，而非只看按鈕文字。320／390px Chromium touch regression 實際點擊 44px 控制項邊緣，驗證縮放不移動人物、訊息只送一次與 dialog 能關閉；依 [W3C 44px 目標說明](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html) 改善幾個常用控制，並非宣稱整站 AAA、實體手機或跨 NAT 已驗證。
 - **字型只載入需要的檔案，不犧牲設計。** 同樣的 Manrope／Urbanist 與字重改用兩個固定本機 variable WOFF2，移除兩個 Fontsource dependencies。公開站 `260bb43` → `6256280`，桌機 1440×1000／手機 viewport 390×844 各三輪 fresh context，實際字型請求每輪均由 7 → 2，`encodedBodySize` 總和由 92,724 → 52,588 B，少 40,136 B（43.3% **字型 bytes**，不是全站比例）。Browser regression 同時驗證 loaded faces／ranges、兩個同源請求與 CDP 實際 rendered glyph，沒有把 CSS 宣告成功當成字型載入成功。
 
 ### 字型改善的 cold-load 限制

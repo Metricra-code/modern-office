@@ -353,9 +353,7 @@ export const Workspace = () => {
                   <div className="device-controls">
                     <button
                       className={`device-button ${office.self.status === 'focus' ? 'device-active' : ''}`}
-                      aria-label={
-                        office.self.status === 'focus' ? 'Leave focus mode' : 'Enter focus mode'
-                      }
+                      aria-label="Focus mode"
                       aria-pressed={office.self.status === 'focus'}
                       onClick={() =>
                         office.changeStatus(office.self.status === 'focus' ? 'available' : 'focus')
@@ -749,20 +747,13 @@ export const Workspace = () => {
                 <VideoTile stream={call.remoteStream} label={callTarget?.name ?? 'Teammate'} />
               </div>
               <div className="call-actions">
-                <button
-                  className="secondary-button"
-                  aria-pressed={call.muted}
-                  onClick={call.toggleMic}
-                >
+                <button className="secondary-button" onClick={call.toggleMic}>
                   {call.muted ? <MicOff size={18} /> : <Mic size={18} />}
                   {call.muted ? 'Unmute' : 'Mute'}
                 </button>
-                <button
-                  className="secondary-button"
-                  aria-pressed={call.cameraOff}
-                  onClick={call.toggleCamera}
-                >
-                  {call.cameraOff ? <VideoOff size={18} /> : <Video size={18} />}Camera
+                <button className="secondary-button" onClick={call.toggleCamera}>
+                  {call.cameraOff ? <VideoOff size={18} /> : <Video size={18} />}
+                  {call.cameraOff ? 'Turn camera on' : 'Turn camera off'}
                 </button>
                 <button className="danger-button" onClick={call.end}>
                   <PhoneOff size={18} />

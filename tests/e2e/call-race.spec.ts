@@ -48,7 +48,7 @@ test('a batched invitation and caller departure cannot open a stale call or capt
       Reflect.apply(send, this, [message]);
     };
   });
-  await page.getByRole('button', { name: 'Enter focus mode', exact: true }).click();
+  await page.getByRole('button', { name: 'Focus mode', exact: true }).click();
   expect(
     await page.evaluate((payloads) => {
       const socket = (window as Window & { callRaceClient?: WebSocket }).callRaceClient;

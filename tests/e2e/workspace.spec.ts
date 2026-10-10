@@ -103,9 +103,9 @@ test('two guests sync chat, presence, video consent and cleanup', async ({ brows
     )
     .toBeGreaterThan(0);
   await alice.getByRole('button', { name: 'Mute', exact: true }).click();
-  await expect(alice.getByRole('button', { name: 'Unmute', exact: true })).toHaveAttribute(
+  await expect(alice.getByRole('button', { name: 'Unmute', exact: true })).toBeVisible();
+  await expect(alice.getByRole('button', { name: 'Unmute', exact: true })).not.toHaveAttribute(
     'aria-pressed',
-    'true',
   );
   await alice.getByRole('button', { name: 'End call' }).click();
   await expect(bob.getByRole('dialog')).not.toBeVisible();
