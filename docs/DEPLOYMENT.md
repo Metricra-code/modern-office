@@ -98,6 +98,10 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 320px WebKit 先重現原點命中空地、click 卻被校正 13px 到人物；僅把既有地板 handler 與人物改為 sibling surfaces，同一觸控點、精確到達座標、完整 profile 與鍵盤斷言保持不變，診斷程式已移除。Ubuntu CI 使用匹配的 WebKit revision 2370；本機 macOS 14.4 的 revision 2251 因 protocol 不相容無法建立頁面，不算通過，也不冒稱 Safari／iPhone 實機或跨 NAT 驗證。公開 HTML、JS、CSS、字型、插畫等 23 個資源均回 200；沒有更換視覺素材、加入依賴或付費服務。
 
+2026-10-11 影片播放提示修補：`bun run check`（37 個單元測試）、public build、deploy dry-run、63 個 Cloudflare 本機／63 個公開站 Chromium E2E 與 15 個公開站 Firefox 核心流程通過。公開版本 `5f8c4f6f-dcd9-48e0-a3ac-0b9827e01f40` 已確認承接 100% 流量，應用程式提交 `030901a`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38077342529) 首次執行 60 項 Chromium E2E 與 30 項 Firefox／WebKit 核心測試通過，另 3 項 production-only 測試按設定略過，沒有重試或 flaky。
+
+五個播放回歸在本機 Cloudflare 各連跑三輪通過：當前拒絕仍可手動 Play；Retry 新串流成功後不留舊提示；舊 automatic／manual Promise 拒絕不蓋住替換串流或同串流的新播放。測試只控制合法拒絕／時序，成功播放沿用原生 video，核對 source identity、paused／readyState／currentTime、video tracks 清理與 audio 0；使用原生假攝影機，不擷取真實硬體，也不宣稱 Firefox／WebKit 媒體或實機驗證。部署後 23 個資源／端點均 HTTP 200，快取策略正確；初始 9 scripts 為 187,351 B gzip（前版 187,319 B）。沒有新增依賴或付費服務，不宣稱 LCP／INP 或整站加速。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
