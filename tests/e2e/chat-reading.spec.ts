@@ -168,6 +168,7 @@ test('conversation tabs use one tab stop, wrapped arrow navigation and a focusab
 
 test('drafts stay with their channel when switching tabs and rooms', async ({ page }) => {
   await page.goto('/?mode=demo');
+  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
   await page.getByLabel('Message general', { exact: true }).fill('General draft');
   await page.getByRole('tab', { name: 'This room', exact: true }).click();
   await expect(page.getByLabel('Message studio', { exact: true })).toHaveValue('');

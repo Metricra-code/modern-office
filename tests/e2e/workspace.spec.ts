@@ -152,6 +152,7 @@ test('map has no focus frame while keyboard movement retains a visible instructi
   page,
 }) => {
   await page.goto('/?mode=demo');
+  await expect(page.locator('.app-shell')).toHaveAttribute('aria-busy', 'false');
   const map = page.getByRole('group', { name: /Interactive office/ });
   const world = page.locator('.map-world');
   const bounds = (await world.boundingBox())!;
