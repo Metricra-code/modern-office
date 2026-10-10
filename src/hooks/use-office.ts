@@ -30,6 +30,7 @@ export const useOffice = () => {
   const [mode, setMode] = useState<'demo' | 'live'>('demo');
   const [connection, setConnection] = useState<ConnectionState>('demo');
   const [workspace, setWorkspace] = useState('studio-team');
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState('');
   const [signal, setSignal] = useState<IncomingSignal[]>([]);
   const signalSequence = useRef(0);
@@ -76,6 +77,7 @@ export const useOffice = () => {
         url.searchParams.set('mode', 'live');
         window.history.replaceState({}, '', url);
       }
+      setInitialized(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [updateSelf]);
@@ -295,6 +297,7 @@ export const useOffice = () => {
     peers,
     messages,
     workspace,
+    initialized,
     mode,
     connection,
     error,

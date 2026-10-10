@@ -37,6 +37,8 @@
 - **流程要真的接通。** 在 Demo 按 Open a second guest，原分頁也轉入同一個 live workspace；兩個頁面真人 chat 同步有 regression test，不把開新頁當作功能完成。
 - **聊天不搶走閱讀位置。** 測試 100 則 bounded history、其他 channel 更新、People、手機隱藏／顯示與明確 Jump to latest；也驗證單一 Tab stop、方向鍵、Home／End 和可聚焦 panel。
 - **送達確認不能清錯草稿。** mode／channel 各自保留草稿 revision；測試延遲 ACK、編輯後回到同樣文字，以及實際 hook 在 mode 切換前清理窗口收到匹配 ACK。最後一項刻意注入事件時序，不宣稱自然網路常發生這個順序。
+- **先量測再 memo。** 固定 100 則訊息、20Hz 鍵盤移動與模擬 WebSocket own-echo，三輪 Chromium CDP Script CPU 中位數為 2.923 → 1.669 ms／實際 move；獨立診斷確認 101 次移動的 timestamp formatter 存取由 20,200 次降到 0。比較版本為 `448f56e` → `bec39fb`；0 訊息控制組也下降，before 範圍 2.193–3.787 ms／move，不能將全部差異歸因 memo。兩版均無長任務或聊天 DOM 寫入、frame p95 同為 16.7–16.8ms；這證明減少重複工作，不代表整站速度或 INP 改善。
+- **初始化不是假可操作。** 靜態輸出的辦公室在 URL context 初始化前用原生 inert 阻止互動，避免慢速 JavaScript 載入時跳到預設房間。Regression 刻意暫停 script 請求，實際點擊 footer 不能啟動 stale link；放行後才驗證原 workspace／mode 與案例頁往返。這不是把 retry 成功當成修復。
 
 ## 面試前自己練習
 

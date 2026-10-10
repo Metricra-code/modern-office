@@ -176,6 +176,8 @@ export const Workspace = () => {
     <div
       className={`app-shell ${mobileNavigation ? 'mobile-nav-open' : ''}`}
       data-mobile-tab={mobileTab}
+      inert={!office.initialized}
+      aria-busy={!office.initialized}
       onKeyDown={handleNavigationKeyDown}
     >
       <a href="#main" className="skip-link" inert={mobileNavigation}>
