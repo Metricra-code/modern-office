@@ -58,6 +58,12 @@ GitHub 發布前補齊 Lucide 完整授權 notices，未修改功能程式碼。
 
 部署後檢查 22 個 HTML 引用／驗收資產與端點，均 HTTP 200；hashed JS／CSS／fonts 回傳 `public, max-age=31536000, immutable`，HTML 與未 hash 的地圖維持 `public, max-age=0, must-revalidate`。現代瀏覽器初始 9 scripts 為 189,531 B gzip（改善前 188,982 B，新增 call-ID 保護等程式後 +549 B），不含 `noModule` polyfill；這不是 bundle 減量的宣稱。地圖維持 162,696 B。人工公開瀏覽確認 320px 地圖完整、live 可連線；本機人工確認 130% 放大後能捲到右緣。沒有宣稱 LCP／INP、實體觸控裝置或所有 NAT 都已驗證；`bun audit` 的既有 dev-toolchain 警示仍存在。
 
+2026-10-10 對話閱讀與房間導覽改善後：37 個單元測試、39 個 Cloudflare 本機 E2E、39 個公開站 E2E 通過；`bun run check`、public build 與 deploy dry-run 通過。公開版本 `fe01cfff-dc69-4fed-8062-fbecdc5a0643` 已確認承接 100% 流量，應用程式提交 `f672cdd`。聊天不再搶走歷史閱讀位置，mode／channel 草稿與延遲 ACK 分離，案例頁保留 workspace／mode；靜態辦公室在 URL context 初始化前原生 inert，避免誤用預設房間。
+
+CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時，Playwright `fill()` 回報完成但沒有 focus／input event，原生座標點擊也不取得地圖焦點；放行後草稿切換正常。兩個測試只新增可操作 boundary，保留原有斷言、timeout 與 retry 設定，沒有移除啟動前 blocked-click regression。初始化／導覽與受影響測試分別連跑五輪通過；修正後 [CI `9e273cf`](https://github.com/Metricra-code/modern-office/actions/runs/38063533485) 首次執行 38 項 E2E 通過、1 項 public-only 入口按設定略過，無重試或 flaky；公開站再跑受影響三項亦通過。
+
+部署後以 curl 核對 32 個 HTML 引用／驗收資產與端點，均 HTTP 200，公開 HTML 含初始化保護；hashed 資產／HTML 快取策略維持正確。現代瀏覽器初始 9 scripts 為 187,161 B gzip，地圖維持 162,696 B，這不是整站加速比例或實際瀏覽器總下載量。公開版本的獨立診斷使用 100 則訊息與合法模擬 WebSocket：100 次移動、101 次移動＋own-echo 均不重複存取 timestamp formatter，聊天／插畫 DOM mutations 與 movement interval 重裝也為 0。三輪 CPU 比較與負載限制記錄於 `docs/INTERVIEW.md`；不宣稱 LCP／INP 或所有 NAT 已驗證。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
