@@ -5,8 +5,8 @@ import type { Player } from '@/lib/protocol';
 import { getRoom, isWalkable, movePlayer, WORLD, type Point } from '@/lib/space';
 import { Avatar } from './avatar';
 
-const OfficeIllustration = () => (
-  <div className="office-art">
+const OfficeIllustration = ({ onClick }: { onClick: React.MouseEventHandler<HTMLDivElement> }) => (
+  <div className="office-art" onClick={onClick}>
     {/* Static export uses a pre-optimized local WebP; no image service required. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img
@@ -99,7 +99,6 @@ export const OfficeMap = ({ self, peers, onMove, onSelect }: OfficeMapProps) => 
     };
   }, [onMove]);
   const walkTo = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.target instanceof Element && event.target.closest('button')) return;
     const bounds = worldRef.current?.getBoundingClientRect();
     if (!bounds) return;
     const point = {
@@ -125,13 +124,9 @@ export const OfficeMap = ({ self, peers, onMove, onSelect }: OfficeMapProps) => 
         aria-describedby="map-instructions"
         onBlur={() => setHint('')}
       >
-        <div
-          className="map-world"
-          ref={worldRef}
-          onClick={walkTo}
-          style={{ width: `${Math.round(zoom * 100)}%` }}
-        >
-          <OfficeIllustration />
+        <div className="map-world" ref={worldRef} style={{ width: `${Math.round(zoom * 100)}%` }}>
+          {/* Sibling click surfaces keep touch adjustment from selecting a nearby avatar. */}
+          <OfficeIllustration onClick={walkTo} />
           {destination && (
             <span
               className="destination"
