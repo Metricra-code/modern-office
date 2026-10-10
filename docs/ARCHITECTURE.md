@@ -41,7 +41,7 @@ At widths up to 760px, navigation, message send, dialog close and map zoom have 
 
 **Profile recovery:** an unsent live profile update leaves the native dialog open, preserves name/color drafts and shows its error inside the modal rather than only behind the backdrop. It does not change the displayed profile. After reconnecting, the same open dialog can retry; profiles remain ephemeral guest state, not durable storage.
 
-Valid 24-character unbroken names wrap in the profile preview, sidebar, Team directory, message author and dialog heading instead of pushing adjacent controls out of view. Validation and full names remain unchanged; this does not change the map's existing first-word labels.
+Valid 24-character unbroken names wrap in the profile preview, sidebar, Team directory, message author and dialog heading instead of pushing adjacent controls out of view. Map labels still use the first word, but only that word is ellipsized when long, so it cannot inflate the person's invisible button area. You/focusing markers stay outside the clipped text; the full button accessible name and profile value remain unchanged.
 
 **Conversation reading:** new messages follow only near the bottom; reading history exposes an explicit jump instead of scrolling the reader away. Other channels and the People panel do not trigger chat scrolling. Mobile visibility changes preserve reading position. Tabs have one tab stop, wrapped arrow navigation, Home/End and a labeled focusable panel. At most ten in-memory mode/channel drafts are kept; an ACK clears only its submitted draft revision, not later edits or another channel. Drafts are not persisted across page navigation or reload.
 

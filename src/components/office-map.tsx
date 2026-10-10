@@ -160,7 +160,7 @@ export const OfficeMap = ({ self, peers, onMove, onSelect }: OfficeMapProps) => 
                 <span className="person-legs" />
               </span>
               <span className="person-name">
-                {player.name.split(' ')[0]}
+                <span className="person-first-name">{player.name.split(' ')[0]}</span>
                 {player.id === self.id && <span> you</span>}
                 {player.status === 'focus' && <span aria-label="focusing"> ◌</span>}
               </span>

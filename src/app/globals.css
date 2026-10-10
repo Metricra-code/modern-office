@@ -737,7 +737,14 @@ h3 {
   color: #46523c;
   box-shadow: 0 2px 2px #545d3820;
 }
-.person-name > span {
+.person-first-name {
+  display: inline-block;
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.person-name > span:not(.person-first-name) {
   color: #58614b;
   font-weight: 500;
 }
