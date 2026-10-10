@@ -27,7 +27,7 @@ Next.js static export (HTML + JS + local fonts + WebP)
 
 **Live:** a shareable workspace routing key, not a private access credential. The server assigns fresh UUIDs and authoritative message attribution. Channels are public within the workspace. Refresh keeps the workspace URL but establishes a new guest identity; profiles are not persisted locally.
 
-**Calls:** one-to-one. Caller consents by starting; receiver must accept before capture. Unsolicited SDP/ICE from another guest is ignored. Media is neither uploaded nor recorded by the app server. STUN-only connectivity can fail across some networks; TURN is an optional deployment concern.
+**Calls:** one-to-one. Caller consents by starting; receiver must accept before capture. Unsolicited SDP/ICE from another guest is ignored. Incoming invitations are checked against the latest peer list before opening the consent dialog, including when an invitation and caller departure arrive in the same React batch. This does not change the call-ID protocol or capture devices without acceptance. Media is neither uploaded nor recorded by the app server. STUN-only connectivity can fail across some networks; TURN is an optional deployment concern.
 
 **Movement:** furniture and plants are passable decoration; office boundaries and room walls remain authoritative. Keyboard movement checks these boundaries; click relocates to a legal destination. Room shortcuts scan a bounded set of open spots, avoiding the latest known peer positions. This improves individual avatar selection but is not an authoritative reservation: simultaneous arrivals or deliberate same-point clicks can still overlap; the People list remains available. No pathfinding, proximity calls or booking system.
 
@@ -46,8 +46,6 @@ Next.js static export (HTML + JS + local fonts + WebP)
 One Durable Object coordinator limits the whole portfolio to 256 guests and 64 workspaces. `acceptWebSocket` keeps connections alive while the isolate hibernates. Validated socket attachments restore identity, position, presence, cooldown and rate-limit windows.
 
 Each occupied workspace has at most one SQLite row containing the latest 100 messages. Chat updates that row before ACK; a failed write rolls the domain back. Movement only changes socket attachments. Restoring the object reconstructs `OfficeRooms` from active sockets and bounded SQL history. Empty workspace rows are removed after the last guest leaves, including stale rows found on restoration. This is temporary application session state, not product history. Cloudflare SQLite PITR can retain recovery data for 30 days; deletion from the app is not immediate physical erasure from platform backups.
-
-Incoming invitations are checked against the latest peer list before opening the consent dialog, including when an invitation and caller departure arrive in the same React batch. This does not change the call-ID protocol or capture devices without acceptance.
 
 ## Security / ceilings
 

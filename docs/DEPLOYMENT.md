@@ -70,6 +70,12 @@ CI 曾暴露未等待初始化的兩項直接操作：受控暫停 scripts 時�
 
 桌機／手機各三輪 cold-load，before 和 after 每版各六次，實際字型請求每輪由 7 → 2、字型 body 由 92,724 → 52,588 B；維持原本字型與字重。手機 LCP 中位數並未改善，量測數據與限制記錄於 `docs/INTERVIEW.md`，不以字型 bytes 減量代替全站性能宣稱。公開桌機與手機畫面亦已檢視，沒有明顯字型 fallback、控制項重疊或整頁 overflow。
 
+2026-10-11 初始化／手機分頁／來電競態改善：`bun run check`（37 個單元測試）、public build、deploy dry-run、46 個 Cloudflare 本機 E2E、46 個公開站 E2E 通過。公開版本 `09449758-c051-4c1e-986b-04925465fb35` 已確認承接 100% 流量，應用程式提交 `e9478ef`。[該版 CI](https://github.com/Metricra-code/modern-office/actions/runs/38066732001) 首次執行 43 項 E2E 通過、3 項 production-only 入口／預取測試按設定略過，沒有重試或 flaky。預取的 demo／live 案例在本機正式環境各連跑三次通過；初始化、手機分頁與 batched call race 亦各連跑三次通過。
+
+初始化時保留地圖預覽，以現有 pill 顯示 Preparing，inert 外提供 status；房間確認後才恢復 Next 預取。手機 Team／Office 分頁名稱與內容一致，最新 peers 阻止已離開者的過期來電。暫停 scripts 的 1440／390／320px 預覽，以及手機 Team 畫面已實際檢視；沒有 page errors 或整頁 overflow。這不是實體觸控或 screen-reader 認證；本輪沒有更換插畫、字型、加入 npm 依賴或付費服務。
+
+部署後以 curl 核對 23 個 HTML 引用／驗收資產與端點均 HTTP 200，初始化 status 和 inert 已存在公開 HTML；hashed 資產與 HTML／地圖快取策略維持正確。初始 9 scripts 為 187,220 B gzip（上一版 187,148 B，增加 72 B），地圖維持 162,696 B。這不是 bundle 減量或 LCP／INP 加速宣稱；本輪主要減少錯誤 context 的預取並改善使用流程。
+
 ## 已知開發工具鏈安全警示
 
 2026-10-10 執行 `bun audit --json` 發現一項 high 警示：[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，影響 `braces@3.0.3` 的深度巢狀 glob pattern。`bun why braces` 確認唯一路徑是 dev dependency `eslint-config-next → @next/eslint-plugin-next → fast-glob → micromatch → braces`；應用程式沒有把 URL、聊天或 WebSocket 輸入交給 glob。公開站使用靜態輸出與 Cloudflare Worker，不執行 ESLint 工具鏈。
