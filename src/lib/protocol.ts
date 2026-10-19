@@ -96,5 +96,4 @@ export const AVATAR_COLORS = avatarColorSchema.options;
 export interface IncomingSignal {
   from: string;
   signal: Signal;
-  sequence: number;
 }

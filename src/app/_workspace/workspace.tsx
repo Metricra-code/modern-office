@@ -50,7 +50,7 @@ const CONNECTION_LABEL: Record<ConnectionState, string> = {
 export const Workspace = () => {
   const office = useOffice();
   const call = useCall({
-    incoming: office.signals,
+    subscribeSignals: office.subscribeSignals,
     connected: office.connection === 'connected',
     peers: office.peers,
     send: office.sendSignal,

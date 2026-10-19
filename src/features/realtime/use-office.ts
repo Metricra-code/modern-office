@@ -28,7 +28,7 @@ interface PendingChat {
 const HANDSHAKE_TIMEOUT_MS = 6000;
 const CHAT_ACK_TIMEOUT_MS = 5000;
 const MAX_RECONNECTS = 5;
-const MAX_QUEUED_SIGNALS = 128;
+export type SignalListener = (incoming: IncomingSignal) => void;
 
 const realtimeUrl = (workspace: string, self: Profile): URL => {
   const endpoint =
@@ -56,8 +56,7 @@ export const useOffice = () => {
   const [workspace, setWorkspace] = useState('studio-team');
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState('');
-  const [signals, setSignals] = useState<IncomingSignal[]>([]);
-  const signalSequence = useRef(0);
+  const signalListeners = useRef(new Set<SignalListener>());
   const [retry, setRetry] = useState(0);
   const socketRef = useRef<WebSocket | undefined>(undefined);
   const pendingChat = useRef<PendingChat | undefined>(undefined);
@@ -119,16 +118,10 @@ export const useOffice = () => {
         case 'error':
           setError(update.message);
           return;
-        case 'signal': {
-          signalSequence.current += 1;
-          const incoming = {
-            from: update.from,
-            signal: update.signal,
-            sequence: signalSequence.current,
-          };
-          setSignals((previous) => [...previous, incoming].slice(-MAX_QUEUED_SIGNALS));
+        case 'signal':
+          for (const listener of signalListeners.current)
+            listener({ from: update.from, signal: update.signal });
           return;
-        }
       }
     },
     [finishChat, updateSelf],
@@ -309,6 +302,12 @@ export const useOffice = () => {
     (target: string, signal: Signal): boolean => send({ type: 'signal', target, signal }),
     [send],
   );
+  const subscribeSignals = useCallback((listener: SignalListener) => {
+    signalListeners.current.add(listener);
+    return () => {
+      signalListeners.current.delete(listener);
+    };
+  }, []);
   const clearError = useCallback(() => setError(''), []);
   return {
     self,
@@ -319,7 +318,6 @@ export const useOffice = () => {
     mode,
     connection,
     error,
-    signals,
     move,
     chat,
     saveProfile,
@@ -327,6 +325,7 @@ export const useOffice = () => {
     enterLive,
     enterDemo,
     sendSignal,
+    subscribeSignals,
     clearError,
   };
 };

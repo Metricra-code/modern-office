@@ -4,7 +4,7 @@ import type { IncomingSignal, Signal } from '@/lib/protocol';
 
 export type CallPhase = 'idle' | 'incoming' | 'outgoing' | 'connecting' | 'active';
 interface CallOptions {
-  incoming: readonly IncomingSignal[];
+  subscribeSignals: (listener: (incoming: IncomingSignal) => void) => () => void;
   connected: boolean;
   peers: readonly { id: string }[];
   send: (target: string, signal: Signal) => boolean;
@@ -19,7 +19,7 @@ const getIceServers = (): RTCIceServer[] => {
     });
   return servers;
 };
-export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
+export const useCall = ({ subscribeSignals, connected, peers, send }: CallOptions) => {
   const [phase, setPhase] = useState<CallPhase>('idle');
   const [target, setTarget] = useState('');
   const [localStream, setLocalStream] = useState<MediaStream>();
@@ -34,7 +34,6 @@ export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
   const phaseRef = useRef<CallPhase>('idle');
   const iceQueue = useRef<RTCIceCandidateInit[]>([]);
   const generation = useRef(0);
-  const processedSequence = useRef(0);
   const signalChain = useRef<Promise<void>>(Promise.resolve());
 
   const transition = useCallback((next: CallPhase) => {
@@ -263,30 +262,19 @@ export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
       end();
     }
   });
-  useEffect(() => {
-    // React may batch several ICE messages. Keep every event and process SDP/ICE
-    // in arrival order rather than overwriting a single "latest signal" state.
-    let disposed = false;
-    queueMicrotask(() => {
-      if (disposed) return;
-      for (const event of incoming) {
-        if (event.sequence <= processedSequence.current) continue;
-        processedSequence.current = event.sequence;
-        if (['invite', 'end', 'decline'].includes(event.signal.kind)) {
-          // Consent and hangup must not wait for an earlier browser SDP operation.
-          void handleSignal(event);
-        } else {
-          const queuedGeneration = generation.current;
-          signalChain.current = signalChain.current.then(async () => {
-            if (queuedGeneration === generation.current) await handleSignal(event);
-          });
-        }
-      }
+  const dispatchSignal = useEffectEvent((event: IncomingSignal) => {
+    if (['invite', 'end', 'decline'].includes(event.signal.kind)) {
+      // Consent and hangup must not wait for an earlier browser SDP operation.
+      void handleSignal(event);
+      return;
+    }
+    // SDP and ICE must run in arrival order, one browser operation at a time.
+    const queuedGeneration = generation.current;
+    signalChain.current = signalChain.current.then(async () => {
+      if (queuedGeneration === generation.current) await handleSignal(event);
     });
-    return () => {
-      disposed = true;
-    };
-  }, [incoming]);
+  });
+  useEffect(() => subscribeSignals((event) => dispatchSignal(event)), [subscribeSignals]);
   useEffect(() => {
     if (phase === 'idle' || phase === 'active') return;
     const timeout = setTimeout(() => {
