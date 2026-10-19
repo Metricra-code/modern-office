@@ -1,49 +1,67 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DEMO_MESSAGES, DEMO_PLAYERS, DEFAULT_PLAYER } from '@/lib/demo';
+import { LIMITS } from '@/lib/limits';
 import {
   clientEventSchema,
   profileSchema,
   serverEventSchema,
-  workspaceSchema,
   type Channel,
   type ChatMessage,
   type ClientEvent,
+  type IncomingSignal,
   type Player,
   type PresenceStatus,
   type Profile,
+  type ServerEvent,
   type Signal,
 } from '@/lib/protocol';
+import { readOfficeContext, writeOfficeContext, type OfficeMode } from '@/lib/routes';
 import { isWalkable, type Point } from '@/lib/space';
+import { DEFAULT_PLAYER, DEMO_MESSAGES, DEMO_PLAYERS } from './demo';
 
 export type ConnectionState = 'demo' | 'connecting' | 'connected' | 'reconnecting' | 'offline';
-export interface IncomingSignal {
-  from: string;
-  signal: Signal;
-  sequence: number;
+interface PendingChat {
+  requestId: string;
+  resolve: (delivered: boolean) => void;
+  timer: ReturnType<typeof setTimeout>;
 }
+const HANDSHAKE_TIMEOUT_MS = 6000;
+const CHAT_ACK_TIMEOUT_MS = 5000;
+const MAX_RECONNECTS = 5;
+const MAX_QUEUED_SIGNALS = 128;
+
+const realtimeUrl = (workspace: string, self: Profile): URL => {
+  const endpoint =
+    process.env.NEXT_PUBLIC_REALTIME_URL ??
+    (['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'ws://localhost:3101/office'
+      : '/office');
+  const url = new URL(endpoint, window.location.origin);
+  url.protocol = url.protocol === 'https:' || url.protocol === 'wss:' ? 'wss:' : 'ws:';
+  url.searchParams.set('workspace', workspace);
+  url.searchParams.set('name', self.name);
+  url.searchParams.set('color', self.color);
+  return url;
+};
+const appendMessage = (messages: ChatMessage[], message: ChatMessage): ChatMessage[] =>
+  [...messages, message].slice(-LIMITS.history);
+
 export const useOffice = () => {
   const [self, setSelf] = useState<Player>(DEFAULT_PLAYER);
   const selfRef = useRef<Player>(DEFAULT_PLAYER);
   const [peers, setPeers] = useState<Player[]>([...DEMO_PLAYERS]);
   const [messages, setMessages] = useState<ChatMessage[]>([...DEMO_MESSAGES]);
-  const [mode, setMode] = useState<'demo' | 'live'>('demo');
+  const [mode, setMode] = useState<OfficeMode>('demo');
   const [connection, setConnection] = useState<ConnectionState>('demo');
   const [workspace, setWorkspace] = useState('studio-team');
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState('');
-  const [signal, setSignal] = useState<IncomingSignal[]>([]);
+  const [signals, setSignals] = useState<IncomingSignal[]>([]);
   const signalSequence = useRef(0);
   const [retry, setRetry] = useState(0);
   const socketRef = useRef<WebSocket | undefined>(undefined);
-  const pendingChat = useRef<
-    | {
-        requestId: string;
-        resolve: (delivered: boolean) => void;
-        timer: ReturnType<typeof setTimeout>;
-      }
-    | undefined
-  >(undefined);
+  const pendingChat = useRef<PendingChat | undefined>(undefined);
+
   const finishChat = useCallback((delivered: boolean) => {
     const pending = pendingChat.current;
     pendingChat.current = undefined;
@@ -51,36 +69,70 @@ export const useOffice = () => {
     clearTimeout(pending.timer);
     pending.resolve(delivered);
   }, []);
-
   const updateSelf = useCallback((next: Player) => {
     selfRef.current = next;
     setSelf(next);
   }, []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      const parsed = workspaceSchema.safeParse(params.get('workspace'));
-      const workspaceId = parsed.success
-        ? parsed.data
-        : `office-${crypto.randomUUID().slice(0, 8)}`;
-      setWorkspace(workspaceId);
-      const live =
-        params.get('mode') === 'live' ||
-        (params.get('mode') !== 'demo' && process.env.NEXT_PUBLIC_DEFAULT_MODE === 'live');
-      if (live) {
+      const context = readOfficeContext(
+        window.location.search,
+        process.env.NEXT_PUBLIC_DEFAULT_MODE === 'live' ? 'live' : 'demo',
+      );
+      setWorkspace(context.workspace);
+      if (context.mode === 'live') {
         updateSelf({ ...selfRef.current, name: `Guest-${crypto.randomUUID().slice(0, 4)}` });
         setPeers([]);
         setMessages([]);
         setMode('live');
-        const url = new URL(window.location.href);
-        url.searchParams.set('workspace', workspaceId);
-        url.searchParams.set('mode', 'live');
-        window.history.replaceState({}, '', url);
+        writeOfficeContext(context);
       }
       setInitialized(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [updateSelf]);
+
+  const receive = useCallback(
+    (update: ServerEvent) => {
+      if (
+        (update.type === 'ack' || update.type === 'error') &&
+        update.requestId === pendingChat.current?.requestId
+      )
+        finishChat(update.type === 'ack');
+      switch (update.type) {
+        case 'welcome': {
+          const local = update.players.find((player) => player.id === update.selfId);
+          if (local) updateSelf(local);
+          setPeers(update.players.filter((player) => player.id !== update.selfId));
+          setMessages(update.messages);
+          setConnection('connected');
+          setError('');
+          return;
+        }
+        case 'presence':
+          setPeers(update.players.filter((player) => player.id !== selfRef.current.id));
+          return;
+        case 'message':
+          setMessages((previous) => appendMessage(previous, update.message));
+          return;
+        case 'error':
+          setError(update.message);
+          return;
+        case 'signal': {
+          signalSequence.current += 1;
+          const incoming = {
+            from: update.from,
+            signal: update.signal,
+            sequence: signalSequence.current,
+          };
+          setSignals((previous) => [...previous, incoming].slice(-MAX_QUEUED_SIGNALS));
+          return;
+        }
+      }
+    },
+    [finishChat, updateSelf],
+  );
 
   useEffect(() => {
     if (mode !== 'live') return;
@@ -92,71 +144,37 @@ export const useOffice = () => {
       if (disposed) return;
       welcomeReceived = false;
       setConnection(attempts ? 'reconnecting' : 'connecting');
-      const endpoint =
-        process.env.NEXT_PUBLIC_REALTIME_URL ??
-        (['localhost', '127.0.0.1'].includes(window.location.hostname)
-          ? 'ws://localhost:3101/office'
-          : '/office');
       let socket: WebSocket;
       try {
-        const url = new URL(endpoint, window.location.origin);
-        url.protocol = url.protocol === 'https:' || url.protocol === 'wss:' ? 'wss:' : 'ws:';
-        url.searchParams.set('workspace', workspace);
-        url.searchParams.set('name', selfRef.current.name);
-        url.searchParams.set('color', selfRef.current.color);
-        socket = new WebSocket(url);
+        socket = new WebSocket(realtimeUrl(workspace, selfRef.current));
       } catch {
         setConnection('offline');
         setError('Check the realtime server URL, or return to the demo.');
         return;
       }
       socketRef.current = socket;
-      // A handshake deadline avoids an indefinitely spinning UI.
       timer = setTimeout(() => {
         if (!welcomeReceived) socket.close();
-      }, 6000);
+      }, HANDSHAKE_TIMEOUT_MS);
       socket.onmessage = (event: MessageEvent<unknown>) => {
         if (disposed || typeof event.data !== 'string') return;
+        let parsed;
         try {
-          const parsed = serverEventSchema.safeParse(JSON.parse(event.data));
-          if (!parsed.success) {
-            setError('The server sent an unsupported update. Please reconnect.');
-            return;
-          }
-          const update = parsed.data;
-          if (
-            (update.type === 'ack' || update.type === 'error') &&
-            update.requestId === pendingChat.current?.requestId
-          )
-            finishChat(update.type === 'ack');
-          if (update.type === 'welcome') {
-            clearTimeout(timer);
-            welcomeReceived = true;
-            attempts = 0;
-            const local = update.players.find((player) => player.id === update.selfId);
-            if (local) updateSelf(local);
-            setPeers(update.players.filter((player) => player.id !== update.selfId));
-            setMessages(update.messages);
-            setConnection('connected');
-            setError('');
-          }
-          if (update.type === 'presence')
-            setPeers(update.players.filter((player) => player.id !== selfRef.current.id));
-          if (update.type === 'message')
-            setMessages((previous) => [...previous, update.message].slice(-100));
-          if (update.type === 'error') setError(update.message);
-          if (update.type === 'signal') {
-            signalSequence.current += 1;
-            const incoming = {
-              from: update.from,
-              signal: update.signal,
-              sequence: signalSequence.current,
-            };
-            setSignal((previous) => [...previous, incoming].slice(-128));
-          }
+          parsed = serverEventSchema.safeParse(JSON.parse(event.data));
         } catch {
           setError('An update could not be read. Please reconnect.');
+          return;
         }
+        if (!parsed.success) {
+          setError('The server sent an unsupported update. Please reconnect.');
+          return;
+        }
+        if (parsed.data.type === 'welcome') {
+          clearTimeout(timer);
+          welcomeReceived = true;
+          attempts = 0;
+        }
+        receive(parsed.data);
       };
       socket.onerror = () => {
         if (!disposed) setError('Cannot reach the office server. Retrying automatically…');
@@ -167,7 +185,7 @@ export const useOffice = () => {
         finishChat(false);
         setPeers([]);
         attempts += 1;
-        if (attempts > 5) {
+        if (attempts > MAX_RECONNECTS) {
           setConnection('offline');
           setError('The office is offline. Try reconnecting or explore the demo.');
           return;
@@ -185,7 +203,7 @@ export const useOffice = () => {
       socketRef.current = undefined;
       finishChat(false);
     };
-  }, [mode, workspace, retry, updateSelf, finishChat]);
+  }, [mode, workspace, retry, receive, finishChat]);
 
   const send = useCallback((event: ClientEvent): boolean => {
     if (!clientEventSchema.safeParse(event).success) return false;
@@ -202,39 +220,43 @@ export const useOffice = () => {
       return false;
     }
   }, []);
-  const move = useCallback(
-    (point: Point): void => {
-      if (!isWalkable(point)) return;
-      if (mode === 'live' && !send({ type: 'move', ...point })) return;
-      updateSelf({ ...selfRef.current, ...point });
+  // Live actions change local state only after the socket accepted them.
+  const applyLocal = useCallback(
+    (event: ClientEvent, next: Partial<Player>): boolean => {
+      if (mode === 'live' && !send(event)) return false;
+      updateSelf({ ...selfRef.current, ...next });
+      return true;
     },
     [mode, send, updateSelf],
+  );
+  const move = useCallback(
+    (point: Point): void => {
+      if (isWalkable(point)) applyLocal({ type: 'move', ...point }, point);
+    },
+    [applyLocal],
   );
   const saveProfile = useCallback(
     (profile: Profile): boolean => {
       const parsed = profileSchema.safeParse(profile);
       if (!parsed.success) {
-        setError('Use a name between 1 and 24 characters.');
+        setError(`Use a name between 1 and ${LIMITS.nameLength} characters.`);
         return false;
       }
-      if (mode === 'live' && !send({ type: 'profile', ...parsed.data })) return false;
-      updateSelf({ ...selfRef.current, ...parsed.data });
-      return true;
+      return applyLocal({ type: 'profile', ...parsed.data }, parsed.data);
     },
-    [mode, send, updateSelf],
+    [applyLocal],
   );
   const changeStatus = useCallback(
     (status: PresenceStatus): void => {
-      if (mode === 'live' && !send({ type: 'status', status })) return;
-      updateSelf({ ...selfRef.current, status });
+      applyLocal({ type: 'status', status }, { status });
     },
-    [mode, send, updateSelf],
+    [applyLocal],
   );
   const chat = useCallback(
     async (text: string, channel: Channel): Promise<boolean> => {
       const event = clientEventSchema.safeParse({ type: 'chat', text, channel });
       if (!event.success || event.data.type !== 'chat') {
-        setError('Write a message between 1 and 500 characters.');
+        setError(`Write a message between 1 and ${LIMITS.messageLength} characters.`);
         return false;
       }
       const chatEvent = event.data;
@@ -245,21 +267,21 @@ export const useOffice = () => {
           const timer = setTimeout(() => {
             setError('Delivery was not confirmed. Your message is still in the composer.');
             finishChat(false);
-          }, 5000);
+          }, CHAT_ACK_TIMEOUT_MS);
           pendingChat.current = { requestId, resolve, timer };
           if (!send({ ...chatEvent, requestId })) finishChat(false);
         });
       }
       const message: ChatMessage = {
         id: crypto.randomUUID(),
-        senderId: 'local',
+        senderId: selfRef.current.id,
         name: selfRef.current.name,
         color: selfRef.current.color,
         text: chatEvent.text,
         channel,
         sentAt: Date.now(),
       };
-      setMessages((previous) => [...previous, message].slice(-100));
+      setMessages((previous) => appendMessage(previous, message));
       return true;
     },
     [mode, send, finishChat],
@@ -271,10 +293,7 @@ export const useOffice = () => {
     setError('');
     setMode('live');
     setRetry((previous) => previous + 1);
-    const url = new URL(window.location.href);
-    url.searchParams.set('workspace', workspace);
-    url.searchParams.set('mode', 'live');
-    window.history.replaceState({}, '', url);
+    writeOfficeContext({ workspace, mode: 'live' });
   }, [workspace, finishChat]);
   const enterDemo = useCallback(() => {
     finishChat(false);
@@ -283,15 +302,14 @@ export const useOffice = () => {
     setPeers([...DEMO_PLAYERS]);
     setMessages([...DEMO_MESSAGES]);
     setError('');
-    updateSelf({ ...selfRef.current, id: 'local' });
-    const url = new URL(window.location.href);
-    url.searchParams.set('mode', 'demo');
-    window.history.replaceState({}, '', url);
-  }, [updateSelf, finishChat]);
+    updateSelf({ ...selfRef.current, id: DEFAULT_PLAYER.id });
+    writeOfficeContext({ workspace, mode: 'demo' });
+  }, [workspace, updateSelf, finishChat]);
   const sendSignal = useCallback(
     (target: string, signal: Signal): boolean => send({ type: 'signal', target, signal }),
     [send],
   );
+  const clearError = useCallback(() => setError(''), []);
   return {
     self,
     peers,
@@ -301,7 +319,7 @@ export const useOffice = () => {
     mode,
     connection,
     error,
-    signal,
+    signals,
     move,
     chat,
     saveProfile,
@@ -309,6 +327,7 @@ export const useOffice = () => {
     enterLive,
     enterDemo,
     sendSignal,
-    clearError: () => setError(''),
+    clearError,
   };
 };
+export type Office = ReturnType<typeof useOffice>;

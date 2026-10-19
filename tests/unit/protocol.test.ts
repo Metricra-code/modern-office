@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  clientEventSchema,
-  serverEventSchema,
-  workspaceSchema,
-} from '../../src/lib/protocol';
+import { clientEventSchema, serverEventSchema, workspaceSchema } from '../../src/lib/protocol';
 
 describe('untrusted messages', () => {
   test('trims messages and rejects empty or oversized text', () => {

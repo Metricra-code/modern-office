@@ -1,9 +1,10 @@
 'use client';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, Hash, MessageCircle, Phone, Users } from 'lucide-react';
-import type { Channel, ChatMessage, Player } from '@/lib/protocol';
-import { getRoomDetails, type RoomId } from '@/lib/space';
-import { Avatar } from './avatar';
+import { Avatar } from '@/components/ui/avatar';
+import { STATUS_LABEL } from '@/lib/presence';
+import type { Channel, ChatMessage, Player, RoomId } from '@/lib/protocol';
+import { getRoomDetails } from '@/lib/space';
 
 const messageTime = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
 const formatMessageTime = (sentAt: number): string => {
@@ -203,11 +204,7 @@ export const ChatPanel = ({
                     {player.id === self.id ? ' (you)' : ''}
                   </strong>
                   <span>
-                    {player.status === 'focus'
-                      ? 'Focusing'
-                      : player.status === 'away'
-                        ? 'Away'
-                        : 'Available'}
+                    {STATUS_LABEL[player.status]}
                     {isDemo && player.id !== self.id ? ' · sample' : ''}
                   </span>
                 </div>

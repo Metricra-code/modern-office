@@ -93,3 +93,8 @@ export type ClientEvent = z.infer<typeof clientEventSchema>;
 export type ChatEvent = Extract<ClientEvent, { type: 'chat' }>;
 export type ServerEvent = z.infer<typeof serverEventSchema>;
 export const AVATAR_COLORS = avatarColorSchema.options;
+export interface IncomingSignal {
+  from: string;
+  signal: Signal;
+  sequence: number;
+}

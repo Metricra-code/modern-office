@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Minus, Plus, LocateFixed, Navigation } from 'lucide-react';
 import type { Player } from '@/lib/protocol';
-import { getRoom, isWalkable, movePlayer, WORLD, type Point } from '@/lib/space';
-import { Avatar } from './avatar';
+import { getRoom, getRoomDetails, isWalkable, movePlayer, WORLD, type Point } from '@/lib/space';
+import { Avatar } from '@/components/ui/avatar';
 
 const OfficeIllustration = ({ onClick }: { onClick: React.MouseEventHandler<HTMLDivElement> }) => (
   <div className="office-art" onClick={onClick}>
@@ -200,16 +200,7 @@ export const OfficeMap = ({ self, peers, onMove, onSelect }: OfficeMapProps) => 
       <div className="map-you">
         <Avatar name={self.name} color={self.color} size="small" />
         <span>
-          You’re in{' '}
-          <strong>
-            {getRoom(self) === 'studio'
-              ? 'the studio'
-              : getRoom(self) === 'quiet'
-                ? 'the focus room'
-                : getRoom(self) === 'meeting'
-                  ? 'the meeting room'
-                  : 'the lounge'}
-          </strong>
+          You’re in <strong>{getRoomDetails(getRoom(self)).place}</strong>
         </span>
       </div>
     </div>

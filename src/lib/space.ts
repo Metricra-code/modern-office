@@ -107,5 +107,7 @@ export const findOpenSpot = (
     (point) =>
       (!room || getRoom(point) === room) &&
       isWalkable(point) &&
-      occupied.every((other) => Math.hypot(other.x - point.x, other.y - point.y) >= ARRIVAL_SPACING),
+      occupied.every(
+        (other) => Math.hypot(other.x - point.x, other.y - point.y) >= ARRIVAL_SPACING,
+      ),
   );

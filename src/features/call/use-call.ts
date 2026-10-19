@@ -1,7 +1,6 @@
 'use client';
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
-import type { Signal } from '@/lib/protocol';
-import type { IncomingSignal } from './use-office';
+import type { IncomingSignal, Signal } from '@/lib/protocol';
 
 export type CallPhase = 'idle' | 'incoming' | 'outgoing' | 'connecting' | 'active';
 interface CallOptions {
@@ -322,21 +321,17 @@ export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
     },
     [],
   );
-  const toggleMic = () => {
-    const tracks = streamRef.current?.getAudioTracks() ?? [];
-    if (!tracks.length) return;
+  const setTracksEnabled = (tracks: MediaStreamTrack[] = [], enabled: boolean): boolean => {
     tracks.forEach((track) => {
-      track.enabled = muted;
+      track.enabled = enabled;
     });
-    setMuted(!muted);
+    return tracks.length > 0;
+  };
+  const toggleMic = () => {
+    if (setTracksEnabled(streamRef.current?.getAudioTracks(), muted)) setMuted(!muted);
   };
   const toggleCamera = () => {
-    const tracks = streamRef.current?.getVideoTracks() ?? [];
-    if (!tracks.length) return;
-    tracks.forEach((track) => {
-      track.enabled = cameraOff;
-    });
-    setCameraOff(!cameraOff);
+    if (setTracksEnabled(streamRef.current?.getVideoTracks(), cameraOff)) setCameraOff(!cameraOff);
   };
   const preview = async () => {
     if (phaseRef.current !== 'idle') return;
@@ -361,3 +356,4 @@ export const useCall = ({ incoming, connected, peers, send }: CallOptions) => {
     clearError: () => setError(''),
   };
 };
+export type Call = ReturnType<typeof useCall>;
