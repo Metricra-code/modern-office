@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 const NAV_CONTROLS = '#workspace-nav a[href], #workspace-nav button:not([disabled])';
-const DESKTOP_QUERY = '(max-width: 760px)';
+const MOBILE_QUERY = '(max-width: 760px)';
 
 // The drawer traps focus while open and hands it back to the menu button on close.
 export const useMobileNavigation = () => {
@@ -15,7 +15,7 @@ export const useMobileNavigation = () => {
     return () => trigger?.focus();
   }, [open]);
   useEffect(() => {
-    const viewport = window.matchMedia(DESKTOP_QUERY);
+    const viewport = window.matchMedia(MOBILE_QUERY);
     const closeOnDesktop = (event: MediaQueryListEvent) => {
       if (!event.matches) setOpen(false);
     };

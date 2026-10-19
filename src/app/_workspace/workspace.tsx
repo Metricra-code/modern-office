@@ -79,6 +79,7 @@ export const Workspace = () => {
   const notesHref = workspaceRoute('notes', office.workspace, office.mode);
   const closeDialog = () => setDialog(undefined);
   useEffect(() => {
+    if (!office.initialized) return;
     const openHelp = (event: KeyboardEvent) => {
       if (event.key !== '?' || event.metaKey || event.ctrlKey || event.altKey) return;
       if (isTyping(event.target) || document.querySelector('dialog[open]')) return;
@@ -87,7 +88,7 @@ export const Workspace = () => {
     };
     window.addEventListener('keydown', openHelp);
     return () => window.removeEventListener('keydown', openHelp);
-  }, []);
+  }, [office.initialized]);
 
   const showSpace = () => {
     setMobileTab('space');
@@ -378,7 +379,7 @@ export const Workspace = () => {
           onClose={closeDialog}
         />
         <MemberDialog
-          member={selected}
+          member={selectedPeer ?? selected}
           isDemo={isDemo}
           connected={connected}
           present={Boolean(selectedPeer)}

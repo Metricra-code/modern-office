@@ -18,7 +18,8 @@ const allowedOrigins = (
   process.env.ALLOWED_ORIGINS ?? 'http://localhost:3100,http://127.0.0.1:3100'
 )
   .split(',')
-  .map((origin) => origin.trim());
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS)
   throw new Error('ALLOWED_ORIGINS is required in production');
 
@@ -45,7 +46,6 @@ const server = Bun.serve({
       return new Response('Origin not allowed', { status: 403 });
     const handshake = parseHandshake(url);
     if (!handshake) return new Response('Invalid guest profile', { status: 400 });
-    // Validate the handshake before allocating an in-memory guest.
     if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
       return new Response('WebSocket required', { status: 426 });
     try {

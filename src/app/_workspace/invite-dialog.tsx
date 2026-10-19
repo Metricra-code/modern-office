@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { ArrowRight, ArrowUpRight, CheckCircle2, Copy, Radio } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { workspaceRoute } from '@/lib/routes';
 
 interface InviteDialogProps {
   open: boolean;
@@ -14,7 +15,7 @@ interface InviteDialogProps {
 const inviteUrlFor = (workspace: string): string =>
   typeof window === 'undefined'
     ? ''
-    : `${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/?workspace=${workspace}&mode=live`;
+    : `${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${workspaceRoute('office', workspace, 'live')}`;
 
 // Mounted per opening so the copied state starts fresh each time.
 const InviteContent = ({
@@ -23,7 +24,7 @@ const InviteContent = ({
   isDemo,
   onJoinLive,
   onClose,
-}: InviteDialogProps) => {
+}: Omit<InviteDialogProps, 'open'>) => {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
   const inviteUrl = inviteUrlFor(workspace);
