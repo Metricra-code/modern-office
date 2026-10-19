@@ -24,6 +24,10 @@ NEXT_PUBLIC_SITE_URL=https://modern-office.YOUR-SUBDOMAIN.workers.dev bun run de
 
 `deploy` 使用 `build:public`，設定 `NEXT_PUBLIC_DEFAULT_MODE=live` 與同源 `/office`。`NEXT_PUBLIC_*` 在 Next build 時固定，修改後必須重新 build/deploy。
 
+### 自動部署（push 到 `main`）
+
+`.github/workflows/ci.yml` 的 `deploy` job 只在 push 到 `main`、且 `verify`（format、lint、typecheck、單元、E2E、build、跨瀏覽器 smoke）全部通過後執行 `bun run deploy`，再以 `/health` 確認上線。同時只會有一個部署在跑。需要在 GitHub repo 的 Actions secrets 設定 `CLOUDFLARE_API_TOKEN`（Edit Cloudflare Workers 範本）與 `CLOUDFLARE_ACCOUNT_ID`；CI 不能用 `wrangler login`。其他分支與 PR 只跑檢查，不部署。
+
 部署前可只做本機預檢，不更新雲端：
 
 ```bash
