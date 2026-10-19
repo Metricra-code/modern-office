@@ -1,0 +1,69 @@
+/* The local pixel-art map carries the visual detail; app controls stay quiet. */
+.office-art {
+  position: relative;
+}
+.floorplan {
+  aspect-ratio: 900/570;
+  user-select: none;
+}
+.floor-room-label {
+  position: absolute;
+  color: #43553c;
+  font-size: 7px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  padding: 4px 6px;
+  background: #f8f6eb;
+  border: 1px solid #afb49a;
+  border-radius: 1px;
+  pointer-events: none;
+}
+.floor-label-studio {
+  left: 18%;
+  top: 11%;
+}
+.floor-label-meeting {
+  left: 67%;
+  top: 11%;
+}
+.floor-label-quiet {
+  left: 20%;
+  top: 86%;
+}
+.floor-label-lounge {
+  left: 63%;
+  top: 86%;
+}
+@media (max-width: 760px) {
+  .floor-room-label {
+    font-size: 5px;
+    letter-spacing: 0.65px;
+    padding: 4px 5px;
+  }
+}
+@media (max-width: 760px) {
+  .sidebar {
+    visibility: hidden;
+  }
+  .mobile-nav-open .sidebar {
+    visibility: visible;
+  }
+}
+.map-feedback {
+  position: absolute;
+  left: 18px;
+  bottom: 58px;
+  max-width: calc(100% - 36px);
+  background: #f8f3e5;
+  border: 1px solid #d1c4a5;
+  border-radius: 5px;
+  padding: 8px 11px;
+  font-size: 10px;
+  color: #76623b;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.second-guest-link {
+  display: flex;
+}
