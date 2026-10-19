@@ -5,7 +5,7 @@ import {
   ChevronDown,
   HelpCircle,
   LayoutGrid,
-  Plus,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import type { Player } from '@/lib/protocol';
@@ -89,7 +89,7 @@ export const Sidebar = ({
     <div className="sidebar-label">
       ROOMS
       <button className="icon-button" aria-label="Invite a teammate" onClick={onInvite}>
-        <Plus size={14} />
+        <UserPlus size={14} />
       </button>
     </div>
     <nav className="room-nav" aria-label="Office rooms">

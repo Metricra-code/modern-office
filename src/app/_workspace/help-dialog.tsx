@@ -26,7 +26,8 @@ interface HelpDialogProps {
 export const HelpDialog = ({ open, notesHref, prefetch, onClose }: HelpDialogProps) => (
   <Dialog open={open} title="How to use the office" onClose={onClose}>
     <p className="dialog-description">
-      Use a sample workspace on your own, or invite a guest to connect live.
+      Use a sample workspace on your own, or invite a guest to connect live. Press ? anywhere
+      outside a text field to open this guide.
     </p>
     <ol className="help-list">
       {STEPS.map((step, index) => (

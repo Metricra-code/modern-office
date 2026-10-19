@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -36,6 +36,9 @@ import { Sidebar } from './sidebar';
 import { useMobileNavigation } from './use-mobile-navigation';
 
 type WorkspaceDialog = 'profile' | 'invite' | 'help' | 'devices';
+const isTyping = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 const CONNECTION_LABEL: Record<ConnectionState, string> = {
   demo: 'Demo workspace',
   connected: 'Live workspace',
@@ -75,6 +78,16 @@ export const Workspace = () => {
   const error = office.error || call.error || roomError;
   const notesHref = workspaceRoute('notes', office.workspace, office.mode);
   const closeDialog = () => setDialog(undefined);
+  useEffect(() => {
+    const openHelp = (event: KeyboardEvent) => {
+      if (event.key !== '?' || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isTyping(event.target) || document.querySelector('dialog[open]')) return;
+      event.preventDefault();
+      setDialog('help');
+    };
+    window.addEventListener('keydown', openHelp);
+    return () => window.removeEventListener('keydown', openHelp);
+  }, []);
 
   const showSpace = () => {
     setMobileTab('space');
