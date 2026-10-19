@@ -99,12 +99,6 @@ test('two guests sync chat, presence, video consent and cleanup', async ({ brows
     )
     .toBeCloseTo((700 / 900) * 100, 0);
   await expect(bob.locator('.toast')).not.toBeVisible();
-  await alice.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
-  await alice.evaluate(() => document.fonts.ready);
-  await alice.screenshot({
-    path: test.info().outputPath('furniture-passable.png'),
-    fullPage: true,
-  });
   await alice.getByRole('button', { name: 'Bob in lounge' }).click();
   await alice.getByRole('button', { name: 'Start a video call' }).click();
   await expect(bob.getByRole('dialog')).toContainText('Accept to share your camera and microphone');

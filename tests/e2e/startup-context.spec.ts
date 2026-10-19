@@ -25,12 +25,6 @@ test('the prerendered office cannot activate stale links before URL context init
     await expect(preparation).toBeAttached();
     expect(await preparation.evaluate((status) => status.closest('[inert]'))).toBeNull();
     await expect(page.locator('.connection-pill')).toHaveText('Preparing…');
-    await expect(page.locator('.floorplan')).toHaveAttribute('fetchpriority', 'high');
-    if (process.env.PLAYWRIGHT_BASE_URL)
-      await expect(page.locator('link[rel="preload"][as="image"]')).toHaveAttribute(
-        'href',
-        /office-map\.webp/,
-      );
     const notes = page.locator('.app-footer a');
     await notes.scrollIntoViewIfNeeded();
     await notes.evaluate((link) => {

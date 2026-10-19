@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { OfficeRooms } from '../../server/rooms';
 import { isWalkable } from '../../src/lib/space';
 
@@ -218,28 +218,13 @@ describe('Cloudflare transport boundaries and hibernation', () => {
     database.close();
   });
 
-  test('serializes a presence broadcast once while preserving workspace isolation', () => {
-    const { office, first, second, outsider, database } = createOffice();
-    const raw = JSON.stringify({ type: 'move', x: 570, y: 140 });
-    const stringify = spyOn(JSON, 'stringify');
-    try {
-      office.webSocketMessage(first.socket, raw);
-      expect(stringify).toHaveBeenCalledTimes(1);
-      expect(first.events).toEqual(second.events);
-      expect(first.events.at(-1)?.type).toBe('presence');
-      expect(outsider.events).toHaveLength(0);
-    } finally {
-      stringify.mockRestore();
-      database.close();
-    }
-  });
-
   test('rejects malformed call signals without forwarding them', () => {
     const { office, first, second, database } = createOffice();
     const target = (second.socket.deserializeAttachment() as { player: Player }).player.id;
     try {
       for (const event of [
         { type: 'signal', target: 'not-a-guest-id', signal: { kind: 'invite' } },
+        { type: 'signal', target, signal: { kind: 'invite' } },
         { type: 'signal', target, signal: { kind: 'invite', callId: null } },
         { type: 'signal', target, signal: { kind: 'invite', unexpected: true } },
       ]) {

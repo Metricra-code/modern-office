@@ -87,12 +87,13 @@ bun start          # 以 Bun 靜態伺服器預覽 out/，不是 next start
 ## 結構
 
 ```text
-src/app/           靜態外殼、作品案例頁、全域 tokens
-src/components/    地圖、聊天、導航、原生 dialogs、視訊
-src/hooks/         office transport / WebRTC 生命週期
-src/lib/           共用協定、geometry、明確標記的 demo fixtures
+src/app/           組合層：workspace 外殼、側欄、dialogs、作品案例頁
+src/features/      功能模組：call（WebRTC）、chat、office（地圖／房間）、profile、realtime（WebSocket 與 demo）
+src/components/ui/ 無業務邏輯的 UI primitives（Avatar、Dialog）
+src/lib/           共用協定（Zod）、geometry、limits、路由
+src/styles/        依 cascade 順序拆分的樣式與字型
 server/            Bun / Cloudflare realtime / shared room domain / static preview
-tests/             單元、Playwright、多訪客、axe-core
+tests/             單元（含 import 邊界測試）、Playwright、多訪客、axe-core
  docs/             架構、免費部署、面試解說、素材來源
 ```
 

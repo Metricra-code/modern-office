@@ -26,7 +26,7 @@ describe('untrusted messages', () => {
     expect(workspaceSchema.parse('studio-team')).toBe('studio-team');
   });
   test('validates server messages before updating UI', () => {
-    expect(serverEventSchema.safeParse({ type: 'snapshot', players: 'not-an-array' }).success).toBe(
+    expect(serverEventSchema.safeParse({ type: 'presence', players: 'not-an-array' }).success).toBe(
       false,
     );
   });
