@@ -330,4 +330,3 @@ export const useOffice = () => {
     clearError,
   };
 };
-export type Office = ReturnType<typeof useOffice>;

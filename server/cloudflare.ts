@@ -56,7 +56,9 @@ export default {
     if (url.pathname !== '/office') return environment.ASSETS.fetch(request);
     const origins = [
       url.origin,
-      ...(environment.ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()) ?? []),
+      ...(environment.ALLOWED_ORIGINS?.split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean) ?? []),
     ];
     if (!origins.includes(request.headers.get('origin') ?? ''))
       return new Response('Origin not allowed', { status: 403 });

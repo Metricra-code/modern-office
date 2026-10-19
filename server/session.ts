@@ -136,7 +136,11 @@ export const handleMessage = (
   now: number,
   persist?: PersistHistory,
 ): Outcome => {
-  if (typeof raw !== 'string' || encoder.encode(raw).byteLength > LIMITS.payloadBytes)
+  if (
+    typeof raw !== 'string' ||
+    raw.length > LIMITS.payloadBytes ||
+    encoder.encode(raw).byteLength > LIMITS.payloadBytes
+  )
     return { guest: current, deliveries: [], close: { code: 1009, reason: 'Message too large' } };
   const guest =
     now - current.windowStart >= 1000

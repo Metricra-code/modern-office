@@ -83,7 +83,6 @@ export const serverEventSchema = z.discriminatedUnion('type', [
 ]);
 export type RoomId = z.infer<typeof roomIdSchema>;
 export type Channel = z.infer<typeof channelSchema>;
-export type AvatarColor = z.infer<typeof avatarColorSchema>;
 export type PresenceStatus = z.infer<typeof statusSchema>;
 export type Profile = z.infer<typeof profileSchema>;
 export type Player = z.infer<typeof playerSchema>;

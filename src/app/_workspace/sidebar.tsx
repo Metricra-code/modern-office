@@ -8,12 +8,11 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import type { Player } from '@/lib/protocol';
+import type { Player, RoomId } from '@/lib/protocol';
 import { Avatar } from '@/components/ui/avatar';
 import { ROOM_ICONS } from '@/features/office/room-icons';
 import { STATUS_LABEL } from '@/lib/presence';
 import { workspaceRoute } from '@/lib/routes';
-import type { RoomId } from '@/lib/protocol';
 import { getRoom, ROOMS } from '@/lib/space';
 interface SidebarProps {
   self: Player;
