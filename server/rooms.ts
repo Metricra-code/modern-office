@@ -34,7 +34,6 @@ export class OfficeRooms {
     return player;
   }
 
-
   restore(workspaceId: string, snapshot: WorkspaceSnapshot): void {
     const previous = this.workspaces.get(workspaceId);
     if (!previous && snapshot.players.length > 0 && this.workspaces.size >= LIMITS.workspaces)

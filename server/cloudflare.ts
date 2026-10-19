@@ -10,7 +10,12 @@ import type {
 } from '@cloudflare/workers-types';
 import { z } from 'zod';
 import { LIMITS } from '../src/lib/limits';
-import { messageSchema, playerSchema, workspaceSchema, type ServerEvent } from '../src/lib/protocol';
+import {
+  messageSchema,
+  playerSchema,
+  workspaceSchema,
+  type ServerEvent,
+} from '../src/lib/protocol';
 import { OfficeRooms } from './rooms';
 import {
   createGuest,
