@@ -2,6 +2,7 @@
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import type { Call, CallPhase } from './use-call';
+import type { LocalMedia } from './use-local-media';
 import { VideoTile } from './video-tile';
 
 const PHASE_DESCRIPTION: Record<Exclude<CallPhase, 'idle'>, string> = {
@@ -13,9 +14,10 @@ const PHASE_DESCRIPTION: Record<Exclude<CallPhase, 'idle'>, string> = {
 
 interface CallDialogProps {
   call: Call;
+  media: LocalMedia;
   peerName?: string;
 }
-export const CallDialog = ({ call, peerName }: CallDialogProps) => (
+export const CallDialog = ({ call, media, peerName }: CallDialogProps) => (
   <Dialog
     open={call.phase !== 'idle'}
     title={
@@ -45,17 +47,17 @@ export const CallDialog = ({ call, peerName }: CallDialogProps) => (
     ) : (
       <>
         <div className="video-grid">
-          <VideoTile stream={call.localStream} muted label="You" cameraOff={call.cameraOff} />
+          <VideoTile stream={media.stream} muted label="You" cameraOff={media.cameraOff} />
           <VideoTile stream={call.remoteStream} label={peerName ?? 'Teammate'} />
         </div>
         <div className="call-actions">
-          <button className="secondary-button" onClick={call.toggleMic}>
-            {call.muted ? <MicOff size={18} /> : <Mic size={18} />}
-            {call.muted ? 'Unmute' : 'Mute'}
+          <button className="secondary-button" onClick={media.toggleMic}>
+            {media.muted ? <MicOff size={18} /> : <Mic size={18} />}
+            {media.muted ? 'Unmute' : 'Mute'}
           </button>
-          <button className="secondary-button" onClick={call.toggleCamera}>
-            {call.cameraOff ? <VideoOff size={18} /> : <Video size={18} />}
-            {call.cameraOff ? 'Turn camera on' : 'Turn camera off'}
+          <button className="secondary-button" onClick={media.toggleCamera}>
+            {media.cameraOff ? <VideoOff size={18} /> : <Video size={18} />}
+            {media.cameraOff ? 'Turn camera on' : 'Turn camera off'}
           </button>
           <button className="danger-button" onClick={call.end}>
             <PhoneOff size={18} />

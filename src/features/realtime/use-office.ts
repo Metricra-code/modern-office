@@ -28,7 +28,7 @@ interface PendingChat {
 const HANDSHAKE_TIMEOUT_MS = 6000;
 const CHAT_ACK_TIMEOUT_MS = 5000;
 const MAX_RECONNECTS = 5;
-const MAX_QUEUED_SIGNALS = 128;
+export type SignalListener = (incoming: IncomingSignal) => void;
 
 const realtimeUrl = (workspace: string, self: Profile): URL => {
   const endpoint =
@@ -50,14 +50,15 @@ export const useOffice = () => {
   const [self, setSelf] = useState<Player>(DEFAULT_PLAYER);
   const selfRef = useRef<Player>(DEFAULT_PLAYER);
   const [peers, setPeers] = useState<Player[]>([...DEMO_PLAYERS]);
+  // Read by receive, which runs before React renders the latest presence.
+  const peersRef = useRef<readonly Player[]>(DEMO_PLAYERS);
   const [messages, setMessages] = useState<ChatMessage[]>([...DEMO_MESSAGES]);
   const [mode, setMode] = useState<OfficeMode>('demo');
   const [connection, setConnection] = useState<ConnectionState>('demo');
   const [workspace, setWorkspace] = useState('studio-team');
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState('');
-  const [signals, setSignals] = useState<IncomingSignal[]>([]);
-  const signalSequence = useRef(0);
+  const signalListeners = useRef(new Set<SignalListener>());
   const [retry, setRetry] = useState(0);
   const socketRef = useRef<WebSocket | undefined>(undefined);
   const pendingChat = useRef<PendingChat | undefined>(undefined);
@@ -73,6 +74,10 @@ export const useOffice = () => {
     selfRef.current = next;
     setSelf(next);
   }, []);
+  const updatePeers = useCallback((next: Player[]) => {
+    peersRef.current = next;
+    setPeers(next);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -83,7 +88,7 @@ export const useOffice = () => {
       setWorkspace(context.workspace);
       if (context.mode === 'live') {
         updateSelf({ ...selfRef.current, name: `Guest-${crypto.randomUUID().slice(0, 4)}` });
-        setPeers([]);
+        updatePeers([]);
         setMessages([]);
         setMode('live');
         writeOfficeContext(context);
@@ -91,7 +96,7 @@ export const useOffice = () => {
       setInitialized(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [updateSelf]);
+  }, [updatePeers, updateSelf]);
 
   const receive = useCallback(
     (update: ServerEvent) => {
@@ -104,14 +109,14 @@ export const useOffice = () => {
         case 'welcome': {
           const local = update.players.find((player) => player.id === update.selfId);
           if (local) updateSelf(local);
-          setPeers(update.players.filter((player) => player.id !== update.selfId));
+          updatePeers(update.players.filter((player) => player.id !== update.selfId));
           setMessages(update.messages);
           setConnection('connected');
           setError('');
           return;
         }
         case 'presence':
-          setPeers(update.players.filter((player) => player.id !== selfRef.current.id));
+          updatePeers(update.players.filter((player) => player.id !== selfRef.current.id));
           return;
         case 'message':
           setMessages((previous) => appendMessage(previous, update.message));
@@ -119,19 +124,15 @@ export const useOffice = () => {
         case 'error':
           setError(update.message);
           return;
-        case 'signal': {
-          signalSequence.current += 1;
-          const incoming = {
-            from: update.from,
-            signal: update.signal,
-            sequence: signalSequence.current,
-          };
-          setSignals((previous) => [...previous, incoming].slice(-MAX_QUEUED_SIGNALS));
+        case 'signal':
+          // Only guests in the latest presence may signal, even before React renders it.
+          if (!peersRef.current.some((peer) => peer.id === update.from)) return;
+          for (const listener of signalListeners.current)
+            listener({ from: update.from, signal: update.signal });
           return;
-        }
       }
     },
-    [finishChat, updateSelf],
+    [finishChat, updatePeers, updateSelf],
   );
 
   useEffect(() => {
@@ -183,7 +184,7 @@ export const useOffice = () => {
         clearTimeout(timer);
         if (disposed) return;
         finishChat(false);
-        setPeers([]);
+        updatePeers([]);
         attempts += 1;
         if (attempts > MAX_RECONNECTS) {
           setConnection('offline');
@@ -203,7 +204,7 @@ export const useOffice = () => {
       socketRef.current = undefined;
       finishChat(false);
     };
-  }, [mode, workspace, retry, receive, finishChat]);
+  }, [mode, workspace, retry, receive, finishChat, updatePeers]);
 
   const send = useCallback((event: ClientEvent): boolean => {
     if (!clientEventSchema.safeParse(event).success) return false;
@@ -288,27 +289,33 @@ export const useOffice = () => {
   );
   const enterLive = useCallback(() => {
     finishChat(false);
-    setPeers([]);
+    updatePeers([]);
     setMessages([]);
     setError('');
     setMode('live');
     setRetry((previous) => previous + 1);
     writeOfficeContext({ workspace, mode: 'live' });
-  }, [workspace, finishChat]);
+  }, [workspace, finishChat, updatePeers]);
   const enterDemo = useCallback(() => {
     finishChat(false);
     setMode('demo');
     setConnection('demo');
-    setPeers([...DEMO_PLAYERS]);
+    updatePeers([...DEMO_PLAYERS]);
     setMessages([...DEMO_MESSAGES]);
     setError('');
     updateSelf({ ...selfRef.current, id: DEFAULT_PLAYER.id });
     writeOfficeContext({ workspace, mode: 'demo' });
-  }, [workspace, updateSelf, finishChat]);
+  }, [workspace, updateSelf, finishChat, updatePeers]);
   const sendSignal = useCallback(
     (target: string, signal: Signal): boolean => send({ type: 'signal', target, signal }),
     [send],
   );
+  const subscribeSignals = useCallback((listener: SignalListener) => {
+    signalListeners.current.add(listener);
+    return () => {
+      signalListeners.current.delete(listener);
+    };
+  }, []);
   const clearError = useCallback(() => setError(''), []);
   return {
     self,
@@ -319,7 +326,6 @@ export const useOffice = () => {
     mode,
     connection,
     error,
-    signals,
     move,
     chat,
     saveProfile,
@@ -327,6 +333,7 @@ export const useOffice = () => {
     enterLive,
     enterDemo,
     sendSignal,
+    subscribeSignals,
     clearError,
   };
 };

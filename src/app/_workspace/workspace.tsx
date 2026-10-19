@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { CallDialog } from '@/features/call/call-dialog';
 import { CameraPreviewDialog } from '@/features/call/camera-preview-dialog';
 import { useCall } from '@/features/call/use-call';
+import { useLocalMedia } from '@/features/call/use-local-media';
 import { ChatPanel } from '@/features/chat/chat-panel';
 import { OfficeMap } from '@/features/office/office-map';
 import { ROOM_ICONS } from '@/features/office/room-icons';
@@ -49,8 +50,10 @@ const CONNECTION_LABEL: Record<ConnectionState, string> = {
 
 export const Workspace = () => {
   const office = useOffice();
+  const media = useLocalMedia();
   const call = useCall({
-    incoming: office.signals,
+    media,
+    subscribeSignals: office.subscribeSignals,
     connected: office.connection === 'connected',
     peers: office.peers,
     send: office.sendSignal,
@@ -75,7 +78,7 @@ export const Workspace = () => {
   const RoomIcon = ROOM_ICONS[activeRoom];
   const callTarget = office.peers.find((player) => player.id === call.target);
   const selectedPeer = office.peers.find((player) => player.id === selected?.id);
-  const error = office.error || call.error || roomError;
+  const error = office.error || call.error || media.error || roomError;
   const notesHref = workspaceRoute('notes', office.workspace, office.mode);
   const closeDialog = () => setDialog(undefined);
   useEffect(() => {
@@ -282,7 +285,10 @@ export const Workspace = () => {
                       aria-label="Test camera"
                       onClick={() => {
                         setDialog('devices');
-                        void call.preview();
+                        if (call.phase !== 'idle') return;
+                        void media.capture(false).then((stream) => {
+                          if (stream) call.clearError();
+                        });
                       }}
                     >
                       <Video size={19} />
@@ -351,6 +357,7 @@ export const Workspace = () => {
               onClick={() => {
                 office.clearError();
                 call.clearError();
+                media.clearError();
                 setRoomError('');
               }}
             >
@@ -391,8 +398,12 @@ export const Workspace = () => {
           onCall={startCall}
           onClose={() => setSelected(undefined)}
         />
-        <CameraPreviewDialog open={dialog === 'devices'} call={call} onClose={closeDialog} />
-        <CallDialog call={call} peerName={callTarget?.name} />
+        <CameraPreviewDialog
+          open={dialog === 'devices' && call.phase === 'idle'}
+          media={media}
+          onClose={closeDialog}
+        />
+        <CallDialog call={call} media={media} peerName={callTarget?.name} />
       </div>
     </>
   );
