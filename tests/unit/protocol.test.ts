@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
   clientEventSchema,
-  isLegacyCallEvent,
   serverEventSchema,
   workspaceSchema,
 } from '../../src/lib/protocol';
@@ -62,15 +61,5 @@ describe('untrusted messages', () => {
           .success,
       ).toBe(true);
     }
-  });
-  test('recognizes only valid legacy calls for the reload hint', () => {
-    const event = { type: 'signal', target: crypto.randomUUID(), signal: { kind: 'invite' } };
-    expect(isLegacyCallEvent(event)).toBe(true);
-    expect(isLegacyCallEvent({ ...event, signal: { ...event.signal, callId: 'invalid' } })).toBe(
-      false,
-    );
-    expect(isLegacyCallEvent({ ...event, target: 'invalid' })).toBe(false);
-    expect(isLegacyCallEvent({ ...event, from: crypto.randomUUID() })).toBe(false);
-    expect(isLegacyCallEvent({ type: 'chat', text: 'hello', channel: 'general' })).toBe(false);
   });
 });

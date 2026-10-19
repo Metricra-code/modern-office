@@ -9,17 +9,18 @@ import type {
   WebSocketPair as WorkerWebSocketPair,
 } from '@cloudflare/workers-types';
 import { z } from 'zod';
-import {
-  clientEventSchema,
-  isLegacyCallEvent,
-  messageSchema,
-  playerSchema,
-  profileSchema,
-  workspaceSchema,
-  type ClientEvent,
-  type ServerEvent,
-} from '../src/lib/protocol';
+import { LIMITS } from '../src/lib/limits';
+import { messageSchema, playerSchema, workspaceSchema, type ServerEvent } from '../src/lib/protocol';
 import { OfficeRooms } from './rooms';
+import {
+  createGuest,
+  handleMessage,
+  parseHandshake,
+  presence,
+  welcome,
+  type Delivery,
+  type Guest,
+} from './session';
 
 // Import platform types as a module, never into the browser's global DOM types.
 declare const Response: typeof WorkerResponse;
@@ -30,31 +31,18 @@ interface Environment {
   OFFICE: DurableObjectNamespace;
   ALLOWED_ORIGINS?: string;
 }
-const connectionSchema = z.object({
+// The hibernation attachment carries the guest's quota and last known player record.
+const attachmentSchema = z.object({
   workspaceId: workspaceSchema,
   player: playerSchema,
   windowStart: z.number(),
   events: z.number().int().nonnegative(),
   lastChat: z.number(),
 });
-type Connection = z.infer<typeof connectionSchema>;
-const historySchema = z.array(messageSchema).max(100);
-const chatEnvelopeSchema = z.object({
-  type: z.literal('chat'),
-  requestId: z.string().uuid().optional(),
-});
-const encoder = new TextEncoder();
+type Attachment = z.infer<typeof attachmentSchema>;
+const historySchema = z.array(messageSchema).max(LIMITS.history);
 
-function parseHandshake(request: WorkerRequest) {
-  const url = new URL(request.url);
-  return {
-    workspaceId: workspaceSchema.parse(url.searchParams.get('workspace')),
-    profile: profileSchema.parse({
-      name: url.searchParams.get('name'),
-      color: url.searchParams.get('color'),
-    }),
-  };
-}
+const toGuest = ({ player, ...quota }: Attachment): Guest => ({ ...quota, id: player.id });
 
 export default {
   async fetch(request: WorkerRequest, environment: Environment): Promise<WorkerResponse> {
@@ -69,43 +57,37 @@ export default {
       return new Response('Origin not allowed', { status: 403 });
     if (request.method !== 'GET' || request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
       return new Response('WebSocket required', { status: 426 });
-    try {
-      parseHandshake(request);
-    } catch {
-      return new Response('Invalid guest profile', { status: 400 });
-    }
-    // ponytail: one coordinator bounds the whole portfolio at 256 guests / 64 workspaces.
+    if (!parseHandshake(url)) return new Response('Invalid guest profile', { status: 400 });
+    // One coordinator bounds the whole portfolio at 256 guests / 64 workspaces.
     return environment.OFFICE.getByName('office').fetch(request);
   },
 } satisfies ExportedHandler<Environment>;
 
 export class OfficeDurableObject {
   private readonly rooms = new OfficeRooms();
-  private readonly connections = new Map<WorkerWebSocket, Connection>();
+  private readonly guests = new Map<WorkerWebSocket, Attachment>();
 
   constructor(private readonly context: DurableObjectState) {
     this.context.storage.sql.exec(
       'CREATE TABLE IF NOT EXISTS history (workspace TEXT PRIMARY KEY, messages TEXT NOT NULL)',
     );
-    this.restoreConnections();
+    this.restoreGuests();
   }
 
-  private restoreConnections(): void {
+  private restoreGuests(): void {
     for (const socket of this.context.getWebSockets()) {
-      const restored = connectionSchema.safeParse(socket.deserializeAttachment());
+      const restored = attachmentSchema.safeParse(socket.deserializeAttachment());
       if (socket.readyState !== 1 || !restored.success) {
         socket.close(1008, 'Invalid session');
         continue;
       }
-      this.connections.set(socket, restored.data);
+      this.guests.set(socket, restored.data);
     }
-    const workspaces = new Set(
-      [...this.connections.values()].map((connection) => connection.workspaceId),
-    );
-    for (const workspaceId of workspaces) {
-      const players = [...this.connections.values()]
-        .filter((connection) => connection.workspaceId === workspaceId)
-        .map((connection) => connection.player);
+    const occupied = new Set([...this.guests.values()].map((guest) => guest.workspaceId));
+    for (const workspaceId of occupied) {
+      const players = [...this.guests.values()]
+        .filter((guest) => guest.workspaceId === workspaceId)
+        .map((guest) => guest.player);
       const row = this.context.storage.sql
         .exec<{ messages: string }>('SELECT messages FROM history WHERE workspace = ?', workspaceId)
         .toArray()[0];
@@ -117,129 +99,77 @@ export class OfficeDurableObject {
     for (const row of this.context.storage.sql.exec<{ workspace: string }>(
       'SELECT workspace FROM history',
     ))
-      if (!workspaces.has(row.workspace))
-        this.context.storage.sql.exec('DELETE FROM history WHERE workspace = ?', row.workspace);
+      if (!occupied.has(row.workspace)) this.deleteHistory(row.workspace);
   }
 
   fetch(request: WorkerRequest): WorkerResponse {
-    const { workspaceId, profile } = parseHandshake(request);
+    const handshake = parseHandshake(new URL(request.url));
+    if (!handshake) return new Response('Invalid guest profile', { status: 400 });
     let player;
     try {
-      player = this.rooms.join(workspaceId, profile);
+      player = this.rooms.join(handshake.workspaceId, handshake.profile);
     } catch {
       return new Response('Workspace unavailable or full', { status: 503 });
     }
+    const guest = createGuest(player.id, handshake.workspaceId, Date.now());
     const pair = new WebSocketPair();
-    const connection: Connection = {
-      workspaceId,
-      player,
-      windowStart: Date.now(),
-      events: 0,
-      lastChat: 0,
-    };
     this.context.acceptWebSocket(pair[1]);
-    this.connections.set(pair[1], connection);
-    pair[1].serializeAttachment(connection);
-    this.send(pair[1], { type: 'welcome', selfId: player.id, ...this.rooms.snapshot(workspaceId) });
-    this.publishPresence(workspaceId);
+    this.save(pair[1], guest);
+    this.send(pair[1], welcome(this.rooms, guest));
+    this.broadcast(guest.workspaceId, presence(this.rooms, guest.workspaceId));
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
   webSocketMessage(socket: WorkerWebSocket, raw: string | ArrayBuffer): void {
-    const connection = this.connections.get(socket);
-    if (!connection) {
+    const attachment = this.guests.get(socket);
+    if (!attachment) {
       socket.close(1008, 'Unknown guest');
       return;
     }
-    if (typeof raw !== 'string' || raw.length > 20_000 || encoder.encode(raw).byteLength > 20_000) {
-      socket.close(1009, 'Message too large');
-      return;
-    }
-    const now = Date.now();
-    const updated =
-      now - connection.windowStart >= 1000
-        ? { ...connection, windowStart: now, events: 1 }
-        : { ...connection, events: connection.events + 1 };
-    this.saveConnection(socket, updated);
-    if (updated.events > 40) {
-      socket.close(1008, 'Too many messages');
-      return;
-    }
-    let requestId: string | undefined;
-    let incoming: unknown;
-    try {
-      incoming = JSON.parse(raw);
-      const envelope = chatEnvelopeSchema.safeParse(incoming);
-      requestId = envelope.success ? envelope.data.requestId : undefined;
-      const event = clientEventSchema.parse(incoming);
-      this.applyEvent(socket, updated, event);
-    } catch {
-      this.send(socket, {
-        type: 'error',
-        message: isLegacyCallEvent(incoming)
-          ? 'Calling was updated. Reload this page before starting a call.'
-          : 'That action could not be completed. Please try again.',
-        ...(requestId ? { requestId } : {}),
-      });
+    const outcome = handleMessage(this.rooms, toGuest(attachment), raw, Date.now(), (workspaceId) =>
+      this.writeHistory(workspaceId),
+    );
+    this.save(socket, outcome.guest, attachment.player);
+    for (const delivery of outcome.deliveries) this.deliver(socket, attachment, delivery);
+    if (outcome.close) socket.close(outcome.close.code, outcome.close.reason);
+  }
+
+  webSocketClose(socket: WorkerWebSocket): void {
+    this.remove(socket);
+  }
+  webSocketError(socket: WorkerWebSocket): void {
+    this.remove(socket);
+  }
+
+  private deliver(socket: WorkerWebSocket, sender: Attachment, delivery: Delivery): void {
+    if (delivery.to === 'self') this.send(socket, delivery.event);
+    else if (delivery.to === 'workspace') this.broadcast(sender.workspaceId, delivery.event);
+    else {
+      const target = [...this.guests].find(([, guest]) => guest.player.id === delivery.id);
+      if (target) this.send(target[0], delivery.event);
     }
   }
 
-  private applyEvent(socket: WorkerWebSocket, connection: Connection, event: ClientEvent): void {
-    if (event.type === 'chat') {
-      this.publishChat(socket, connection, event);
-      return;
-    }
-    if (event.type === 'signal') {
-      const target = [...this.connections].find(([, guest]) => guest.player.id === event.target);
-      if (!target || !this.rooms.canSignal(connection.player.id, event.target))
-        throw new Error('Invalid call target');
-      this.send(target[0], { type: 'signal', from: connection.player.id, signal: event.signal });
-      return;
-    }
-    if (event.type === 'move') this.rooms.move(connection.player.id, event);
-    if (event.type === 'profile') this.rooms.profile(connection.player.id, event);
-    if (event.type === 'status') this.rooms.status(connection.player.id, event.status);
-    const player = this.rooms
-      .snapshot(connection.workspaceId)
-      .players.find((guest) => guest.id === connection.player.id);
-    if (!player) throw new Error('Guest left');
-    this.saveConnection(socket, { ...connection, player });
-    this.publishPresence(connection.workspaceId);
+  private writeHistory(workspaceId: string): void {
+    this.context.storage.sql.exec(
+      'INSERT INTO history (workspace, messages) VALUES (?, ?) ON CONFLICT(workspace) DO UPDATE SET messages = excluded.messages',
+      workspaceId,
+      JSON.stringify(this.rooms.snapshot(workspaceId).messages),
+    );
   }
 
-  private publishChat(
-    socket: WorkerWebSocket,
-    connection: Connection,
-    event: Extract<ClientEvent, { type: 'chat' }>,
-  ): void {
-    if (Date.now() - connection.lastChat < 350) {
-      this.send(socket, {
-        type: 'error',
-        message: 'Give your message a moment before sending another.',
-        ...(event.requestId ? { requestId: event.requestId } : {}),
-      });
-      return;
-    }
-    const previous = this.rooms.snapshot(connection.workspaceId);
-    const message = this.rooms.chat(connection.player.id, event);
-    try {
-      this.context.storage.sql.exec(
-        'INSERT INTO history (workspace, messages) VALUES (?, ?) ON CONFLICT(workspace) DO UPDATE SET messages = excluded.messages',
-        connection.workspaceId,
-        JSON.stringify(this.rooms.snapshot(connection.workspaceId).messages),
-      );
-    } catch (error) {
-      this.rooms.restore(connection.workspaceId, previous);
-      throw error;
-    }
-    this.saveConnection(socket, { ...connection, lastChat: Date.now() });
-    this.broadcast(connection.workspaceId, { type: 'message', message });
-    if (event.requestId) this.send(socket, { type: 'ack', requestId: event.requestId });
+  private deleteHistory(workspaceId: string): void {
+    this.context.storage.sql.exec('DELETE FROM history WHERE workspace = ?', workspaceId);
   }
 
-  private saveConnection(socket: WorkerWebSocket, connection: Connection): void {
-    this.connections.set(socket, connection);
-    socket.serializeAttachment(connection);
+  // The attachment snapshots the domain player so hibernation can restore position and profile.
+  private save(socket: WorkerWebSocket, { id, ...quota }: Guest, fallback?: Attachment['player']) {
+    const player =
+      this.rooms.snapshot(quota.workspaceId).players.find((guest) => guest.id === id) ?? fallback;
+    if (!player) return;
+    const attachment = { ...quota, player };
+    this.guests.set(socket, attachment);
+    socket.serializeAttachment(attachment);
   }
 
   private send(socket: WorkerWebSocket, event: ServerEvent): void {
@@ -257,35 +187,18 @@ export class OfficeDurableObject {
 
   private broadcast(workspaceId: string, event: ServerEvent): void {
     const message = JSON.stringify(event);
-    for (const [socket, connection] of this.connections)
-      if (connection.workspaceId === workspaceId) this.sendText(socket, message);
+    for (const [socket, guest] of this.guests)
+      if (guest.workspaceId === workspaceId) this.sendText(socket, message);
   }
 
-  private publishPresence(workspaceId: string): void {
-    this.broadcast(workspaceId, {
-      type: 'presence',
-      players: this.rooms.snapshot(workspaceId).players,
-    });
-  }
-
-  webSocketClose(socket: WorkerWebSocket): void {
-    this.removeConnection(socket);
-  }
-  webSocketError(socket: WorkerWebSocket): void {
-    this.removeConnection(socket);
-  }
-
-  private removeConnection(socket: WorkerWebSocket): void {
-    const connection = this.connections.get(socket);
-    if (!connection) return;
-    this.connections.delete(socket);
-    this.rooms.leave(connection.player.id);
-    if (this.rooms.snapshot(connection.workspaceId).players.length === 0)
-      this.context.storage.sql.exec(
-        'DELETE FROM history WHERE workspace = ?',
-        connection.workspaceId,
-      );
+  private remove(socket: WorkerWebSocket): void {
+    const guest = this.guests.get(socket);
+    if (!guest) return;
+    this.guests.delete(socket);
+    this.rooms.leave(guest.player.id);
+    if (this.rooms.snapshot(guest.workspaceId).players.length === 0)
+      this.deleteHistory(guest.workspaceId);
     socket.close(1000, 'Guest left');
-    this.publishPresence(connection.workspaceId);
+    this.broadcast(guest.workspaceId, presence(this.rooms, guest.workspaceId));
   }
 }
