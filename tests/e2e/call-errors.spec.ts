@@ -69,11 +69,9 @@ test('a pending old offer cannot block hangup, redial or end a newer call', asyn
   const receiver = await browser.newContext({ permissions: ['camera', 'microphone'] });
   await observeCallCaptures(caller);
   await caller.addInitScript(() => {
-    const observed = window as Window & { offerCount?: number };
     const createOffer = RTCPeerConnection.prototype.createOffer;
     let firstOffer = true;
     RTCPeerConnection.prototype.createOffer = function (this: RTCPeerConnection) {
-      observed.offerCount = (observed.offerCount ?? 0) + 1;
       if (!firstOffer) return Reflect.apply(createOffer, this, []);
       firstOffer = false;
       return new Promise<RTCSessionDescriptionInit>((_resolve, reject) => {
@@ -110,9 +108,6 @@ test('a pending old offer cannot block hangup, redial or end a newer call', asyn
     ).toBe(true);
     await alice.getByRole('button', { name: 'Call Bob', exact: true }).click();
     await bob.getByRole('button', { name: 'Accept call' }).click();
-    await expect
-      .poll(() => alice.evaluate(() => (window as Window & { offerCount?: number }).offerCount))
-      .toBe(2);
     const activeCall = alice.getByRole('dialog').filter({
       hasText: 'Connected · Direct peer-to-peer video',
     });

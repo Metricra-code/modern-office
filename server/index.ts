@@ -1,22 +1,19 @@
 import type { ServerWebSocket } from 'bun';
-import {
-  clientEventSchema,
-  isLegacyCallEvent,
-  profileSchema,
-  workspaceSchema,
-  type ServerEvent,
-} from '../src/lib/protocol';
+import { LIMITS } from '../src/lib/limits';
+import type { ServerEvent } from '../src/lib/protocol';
 import { OfficeRooms } from './rooms';
+import {
+  createGuest,
+  handleMessage,
+  parseHandshake,
+  presence,
+  welcome,
+  type Delivery,
+  type Guest,
+} from './session';
 
-interface GuestSocket {
-  id: string;
-  workspaceId: string;
-  windowStart: number;
-  events: number;
-  lastChat: number;
-}
 const rooms = new OfficeRooms();
-const sockets = new Map<string, ServerWebSocket<GuestSocket>>();
+const sockets = new Map<string, ServerWebSocket<Guest>>();
 const allowedOrigins = (
   process.env.ALLOWED_ORIGINS ?? 'http://localhost:3100,http://127.0.0.1:3100'
 )
@@ -24,12 +21,17 @@ const allowedOrigins = (
   .map((origin) => origin.trim());
 if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS)
   throw new Error('ALLOWED_ORIGINS is required in production');
-const send = (socket: ServerWebSocket<GuestSocket>, event: ServerEvent): void => {
-  socket.send(JSON.stringify(event));
+
+const send = (socket: ServerWebSocket<Guest> | undefined, event: ServerEvent): void => {
+  socket?.send(JSON.stringify(event));
+};
+const deliver = (socket: ServerWebSocket<Guest>, delivery: Delivery): void => {
+  if (delivery.to === 'self') send(socket, delivery.event);
+  else if (delivery.to === 'guest') send(sockets.get(delivery.id), delivery.event);
+  else server.publish(socket.data.workspaceId, JSON.stringify(delivery.event));
 };
 const publishPresence = (workspaceId: string): void => {
-  const event: ServerEvent = { type: 'presence', players: rooms.snapshot(workspaceId).players };
-  server.publish(workspaceId, JSON.stringify(event));
+  server.publish(workspaceId, JSON.stringify(presence(rooms, workspaceId)));
 };
 
 const server = Bun.serve({
@@ -41,28 +43,15 @@ const server = Bun.serve({
     if (url.pathname !== '/office') return new Response('Not found', { status: 404 });
     if (!allowedOrigins.includes(request.headers.get('origin') ?? ''))
       return new Response('Origin not allowed', { status: 403 });
-    const workspace = workspaceSchema.safeParse(url.searchParams.get('workspace'));
-    const profile = profileSchema.safeParse({
-      name: url.searchParams.get('name'),
-      color: url.searchParams.get('color'),
-    });
-    if (!workspace.success || !profile.success)
-      return new Response('Invalid guest profile', { status: 400 });
-    // Validate handshake before allocating an in-memory guest.
+    const handshake = parseHandshake(url);
+    if (!handshake) return new Response('Invalid guest profile', { status: 400 });
+    // Validate the handshake before allocating an in-memory guest.
     if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket')
       return new Response('WebSocket required', { status: 426 });
     try {
-      const player = rooms.join(workspace.data, profile.data);
-      const upgraded = server.upgrade(request, {
-        data: {
-          id: player.id,
-          workspaceId: workspace.data,
-          windowStart: Date.now(),
-          events: 0,
-          lastChat: 0,
-        },
-      });
-      if (!upgraded) {
+      const player = rooms.join(handshake.workspaceId, handshake.profile);
+      const data = createGuest(player.id, handshake.workspaceId, Date.now());
+      if (!server.upgrade(request, { data })) {
         rooms.leave(player.id);
         return new Response('Upgrade failed', { status: 400 });
       }
@@ -71,8 +60,8 @@ const server = Bun.serve({
     }
   },
   websocket: {
-    data: {} as GuestSocket,
-    maxPayloadLength: 20000,
+    data: {} as Guest,
+    maxPayloadLength: LIMITS.payloadBytes,
     idleTimeout: 120,
     sendPings: true,
     backpressureLimit: 1024 * 1024,
@@ -80,64 +69,14 @@ const server = Bun.serve({
     open(socket) {
       sockets.set(socket.data.id, socket);
       socket.subscribe(socket.data.workspaceId);
-      send(socket, {
-        type: 'welcome',
-        selfId: socket.data.id,
-        ...rooms.snapshot(socket.data.workspaceId),
-      });
+      send(socket, welcome(rooms, socket.data));
       publishPresence(socket.data.workspaceId);
     },
     message(socket, raw) {
-      const now = Date.now();
-      if (now - socket.data.windowStart >= 1000) {
-        socket.data.windowStart = now;
-        socket.data.events = 0;
-      }
-      socket.data.events += 1;
-      if (socket.data.events > 40) {
-        socket.close(1008, 'Too many messages');
-        return;
-      }
-      let incoming: unknown;
-      try {
-        incoming = JSON.parse(String(raw));
-        const event = clientEventSchema.parse(incoming);
-        if (event.type === 'chat') {
-          if (now - socket.data.lastChat < 350) {
-            send(socket, {
-              type: 'error',
-              message: 'Give your message a moment before sending another.',
-              requestId: event.requestId,
-            });
-            return;
-          }
-          socket.data.lastChat = now;
-          const message = rooms.chat(socket.data.id, event);
-          if (event.requestId) send(socket, { type: 'ack', requestId: event.requestId });
-          server.publish(
-            socket.data.workspaceId,
-            JSON.stringify({ type: 'message', message } satisfies ServerEvent),
-          );
-        } else if (event.type === 'signal') {
-          if (!rooms.canSignal(socket.data.id, event.target))
-            throw new Error('Invalid call target');
-          const target = sockets.get(event.target);
-          if (!target) throw new Error('Guest left');
-          send(target, { type: 'signal', from: socket.data.id, signal: event.signal });
-        } else {
-          if (event.type === 'move') rooms.move(socket.data.id, event);
-          if (event.type === 'profile') rooms.profile(socket.data.id, event);
-          if (event.type === 'status') rooms.status(socket.data.id, event.status);
-          publishPresence(socket.data.workspaceId);
-        }
-      } catch {
-        send(socket, {
-          type: 'error',
-          message: isLegacyCallEvent(incoming)
-            ? 'Calling was updated. Reload this page before starting a call.'
-            : 'That action could not be completed. Please try again.',
-        });
-      }
+      const outcome = handleMessage(rooms, socket.data, String(raw), Date.now());
+      socket.data = outcome.guest;
+      for (const delivery of outcome.deliveries) deliver(socket, delivery);
+      if (outcome.close) socket.close(outcome.close.code, outcome.close.reason);
     },
     close(socket) {
       sockets.delete(socket.data.id);

@@ -43,7 +43,7 @@ describe('spatial movement', () => {
 });
 
 test('all sample teammates and the local avatar start on open floor', async () => {
-  const { DEMO_PLAYERS, DEFAULT_PLAYER } = await import('../../src/lib/demo');
+  const { DEMO_PLAYERS, DEFAULT_PLAYER } = await import('../../src/features/realtime/demo');
   for (const player of [...DEMO_PLAYERS, DEFAULT_PLAYER]) expect(isWalkable(player)).toBe(true);
 });
 

@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  clientEventSchema,
-  isLegacyCallEvent,
-  serverEventSchema,
-  workspaceSchema,
-} from '../../src/lib/protocol';
+import { clientEventSchema, serverEventSchema, workspaceSchema } from '../../src/lib/protocol';
 
 describe('untrusted messages', () => {
   test('trims messages and rejects empty or oversized text', () => {
@@ -31,7 +26,7 @@ describe('untrusted messages', () => {
     expect(workspaceSchema.parse('studio-team')).toBe('studio-team');
   });
   test('validates server messages before updating UI', () => {
-    expect(serverEventSchema.safeParse({ type: 'snapshot', players: 'not-an-array' }).success).toBe(
+    expect(serverEventSchema.safeParse({ type: 'presence', players: 'not-an-array' }).success).toBe(
       false,
     );
   });
@@ -62,15 +57,5 @@ describe('untrusted messages', () => {
           .success,
       ).toBe(true);
     }
-  });
-  test('recognizes only valid legacy calls for the reload hint', () => {
-    const event = { type: 'signal', target: crypto.randomUUID(), signal: { kind: 'invite' } };
-    expect(isLegacyCallEvent(event)).toBe(true);
-    expect(isLegacyCallEvent({ ...event, signal: { ...event.signal, callId: 'invalid' } })).toBe(
-      false,
-    );
-    expect(isLegacyCallEvent({ ...event, target: 'invalid' })).toBe(false);
-    expect(isLegacyCallEvent({ ...event, from: crypto.randomUUID() })).toBe(false);
-    expect(isLegacyCallEvent({ type: 'chat', text: 'hello', channel: 'general' })).toBe(false);
   });
 });

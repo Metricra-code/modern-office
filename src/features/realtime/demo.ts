@@ -1,4 +1,4 @@
-import type { ChatMessage, Player } from './protocol';
+import type { ChatMessage, Player } from '@/lib/protocol';
 export const DEMO_PLAYERS: readonly Player[] = [
   {
     id: '00000000-0000-4000-8000-000000000001',

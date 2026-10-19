@@ -1,20 +1,24 @@
+import type { RoomId } from './protocol';
+
 export interface Point {
   x: number;
   y: number;
 }
-export type RoomId = 'studio' | 'meeting' | 'quiet' | 'lounge';
 export interface Room {
   id: RoomId;
   name: string;
+  place: string;
   description: string;
   capacity: number;
   spawn: Point;
 }
 export const WORLD = { width: 900, height: 570 } as const;
+export const WALKABLE_BOUNDS = { minX: 65, maxX: 835, minY: 88, maxY: 480 } as const;
 export const ROOMS: readonly Room[] = [
   {
     id: 'studio',
     name: 'Studio',
+    place: 'the studio',
     description: 'Shared desks',
     capacity: 8,
     spawn: { x: 145, y: 125 },
@@ -22,6 +26,7 @@ export const ROOMS: readonly Room[] = [
   {
     id: 'meeting',
     name: 'Meeting room',
+    place: 'the meeting room',
     description: 'Team discussions',
     capacity: 4,
     spawn: { x: 570, y: 140 },
@@ -29,6 +34,7 @@ export const ROOMS: readonly Room[] = [
   {
     id: 'quiet',
     name: 'Focus room',
+    place: 'the focus room',
     description: 'Quiet work area',
     capacity: 4,
     spawn: { x: 145, y: 400 },
@@ -36,6 +42,7 @@ export const ROOMS: readonly Room[] = [
   {
     id: 'lounge',
     name: 'Lounge',
+    place: 'the lounge',
     description: 'Informal conversations',
     capacity: 6,
     spawn: { x: 630, y: 475 },
@@ -62,7 +69,8 @@ const ROOM_WALLS: readonly Wall[] = [
 ];
 export const isWalkable = (point: Point): boolean => {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
-  if (point.x < 65 || point.x > 835 || point.y < 88 || point.y > 480) return false;
+  const { minX, maxX, minY, maxY } = WALKABLE_BOUNDS;
+  if (point.x < minX || point.x > maxX || point.y < minY || point.y > maxY) return false;
   return !ROOM_WALLS.some(
     (wall) =>
       point.x >= wall.x - WALL_CLEARANCE &&
@@ -81,3 +89,25 @@ export const getRoom = (point: Point): RoomId => {
 };
 export const getRoomDetails = (id: RoomId): Room =>
   ROOMS.find((room) => room.id === id) ?? ROOMS[0];
+
+// At most 32 guests, so a bounded grid scan needs no spatial index.
+const ARRIVAL_SPACING = 50;
+const ARRIVAL_STEP = 56;
+const ARRIVAL_COLUMNS = 14;
+const ARRIVAL_GRID: readonly Point[] = Array.from({ length: ARRIVAL_COLUMNS * 8 }, (_, index) => ({
+  x: WALKABLE_BOUNDS.minX + (index % ARRIVAL_COLUMNS) * ARRIVAL_STEP,
+  y: WALKABLE_BOUNDS.minY + Math.floor(index / ARRIVAL_COLUMNS) * ARRIVAL_STEP,
+}));
+export const findOpenSpot = (
+  occupied: readonly Point[],
+  preferred: Point,
+  room?: RoomId,
+): Point | undefined =>
+  [preferred, ...ARRIVAL_GRID].find(
+    (point) =>
+      (!room || getRoom(point) === room) &&
+      isWalkable(point) &&
+      occupied.every(
+        (other) => Math.hypot(other.x - point.x, other.y - point.y) >= ARRIVAL_SPACING,
+      ),
+  );

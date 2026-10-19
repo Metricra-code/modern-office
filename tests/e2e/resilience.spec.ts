@@ -33,14 +33,24 @@ test('guests using the same room shortcut remain individually clickable', async 
 
 test('camera denial is recoverable and never starts a microphone', async ({ page }) => {
   await page.addInitScript(() => {
+    const requests: MediaStreamConstraints[] = [];
+    Object.assign(window, { mediaRequests: requests });
     Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-      value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+      value: (constraints: MediaStreamConstraints) => {
+        requests.push(constraints);
+        return Promise.reject(new DOMException('Permission denied', 'NotAllowedError'));
+      },
     });
   });
   await page.goto('/?mode=demo');
   await page.getByRole('button', { name: 'Test camera' }).click();
   await expect(page.getByRole('dialog')).toContainText('Camera or microphone unavailable');
   await expect(page.getByRole('dialog')).toContainText('microphone is not captured or shared');
+  const requests = await page.evaluate(
+    () => (window as Window & { mediaRequests?: MediaStreamConstraints[] }).mediaRequests ?? [],
+  );
+  expect(requests.length).toBeGreaterThan(0);
+  expect(requests.every((constraints) => !constraints.audio)).toBe(true);
   await page.getByRole('button', { name: 'Close dialog' }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await page.getByLabel('Message general').fill('Still able to chat');
@@ -98,22 +108,20 @@ test('saving a profile while disconnected explains the failure inside the dialog
   await expect(avatar).toHaveClass(/avatar-plum/);
 });
 
-test('responsive screenshots have no runtime errors', async ({ page }) => {
+test('demo at desktop and mobile widths has no runtime errors or page overflow', async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  for (const [label, width, height] of [
-    ['desktop', 1440, 1000],
-    ['mobile', 390, 844],
+  for (const [width, height] of [
+    [1440, 1000],
+    [390, 844],
   ] as const) {
     await page.setViewportSize({ width, height });
     await page.goto('/?mode=demo');
     await expect(page.getByRole('heading', { name: 'Office', exact: true })).toBeVisible();
     await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({
-      path: test.info().outputPath(`workspace-${label}.png`),
-      fullPage: true,
-    });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);

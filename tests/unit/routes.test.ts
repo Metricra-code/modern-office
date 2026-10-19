@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { workspaceRoute } from '../../src/lib/office-navigation';
+import { workspaceRoute } from '../../src/lib/routes';
 
 test('office and engineering notes preserve only validated workspace and mode', () => {
   expect(workspaceRoute('notes', 'team-123', 'live')).toBe(

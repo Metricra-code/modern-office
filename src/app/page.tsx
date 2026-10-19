@@ -1,4 +1,4 @@
-import { Workspace } from '@/components/workspace';
+import { Workspace } from './_workspace/workspace';
 export default function HomePage() {
   return <Workspace />;
 }

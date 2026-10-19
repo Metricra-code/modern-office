@@ -27,9 +27,6 @@ test(
       await second.getByLabel('Message general').fill('Hello from the second guest.');
       await second.getByRole('button', { name: 'Send message' }).click();
       await expect(page.getByRole('log')).toContainText('Hello from the second guest.');
-      await page.locator('.floorplan').evaluate((image) => (image as HTMLImageElement).decode());
-      await page.evaluate(() => document.fonts.ready);
-      await page.screenshot({ path: test.info().outputPath('workspace-live.png'), fullPage: true });
       await page.reload();
       await expect(page.getByText('Live workspace', { exact: true })).toBeVisible();
       expect(new URL(page.url()).searchParams.get('workspace')).toBe(workspace);

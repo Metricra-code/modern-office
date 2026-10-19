@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, type ReactNode } from 'react';
-import { workspaceRoute } from '@/lib/office-navigation';
+import { workspaceRoute } from '@/lib/routes';
 
 interface OfficeReturnLinkProps {
   className?: string;

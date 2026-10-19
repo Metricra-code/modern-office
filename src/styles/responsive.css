@@ -1,0 +1,410 @@
+.mobile-menu,
+.mobile-workspace-tabs,
+.mobile-nav-scrim {
+  display: none;
+}
+.not-found {
+  padding: 15vh 8vw;
+}
+.not-found h1 {
+  font-size: clamp(32px, 5vw, 60px);
+  font-weight: 600;
+}
+.not-found p:not(.eyebrow) {
+  margin: 20px 0 32px;
+  color: var(--muted);
+}
+@media (min-width: 1600px) {
+  .app-shell {
+    grid-template-columns: 265px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 34px 26px 24px;
+  }
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr) 325px;
+    gap: 32px;
+  }
+  .main-content {
+    padding: 44px 48px 28px;
+  }
+  .topbar {
+    padding: 0 48px;
+  }
+  .chat-content {
+    max-height: 640px;
+  }
+  .map-viewport {
+    padding: 22px 16px 20px;
+  }
+}
+@media (max-width: 1250px) {
+  .app-shell {
+    grid-template-columns: 215px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 25px 14px 17px;
+  }
+  .brand {
+    font-size: 23px;
+    gap: 8px;
+  }
+  .topbar {
+    padding: 0 24px;
+  }
+  .main-content {
+    padding: 30px 24px 20px;
+  }
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr) 255px;
+    gap: 18px;
+  }
+  .welcome h1 {
+    font-size: 31px;
+  }
+  .occupancy {
+    gap: 6px;
+  }
+  .occupancy .avatar-stack .avatar:nth-child(n + 3) {
+    display: none;
+  }
+  .space-label {
+    display: none;
+  }
+  .device-button > span {
+    display: none;
+  }
+  .map-bottom {
+    padding: 4px 12px 13px;
+  }
+  .map-bottom > p > span {
+    display: none;
+  }
+  .map-bottom kbd {
+    display: none;
+  }
+  .chat-heading {
+    padding: 18px 13px;
+  }
+  .chat-heading h2 {
+    font-size: 16px;
+  }
+  .chat-heading > div {
+    gap: 6px;
+  }
+  .chat-content {
+    padding: 20px 13px;
+  }
+  .chat-panel {
+    min-height: 555px;
+  }
+}
+@media (max-width: 1020px) {
+  .app-shell {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .workspace-grid {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+  .chat-panel {
+    min-height: 390px;
+  }
+  .chat-content {
+    max-height: 380px;
+  }
+  .chat-heading {
+    padding: 20px;
+  }
+  .chat-heading h2 {
+    font-size: 19px;
+  }
+  .chat-content {
+    padding: 23px 20px;
+  }
+  .chat-tabs {
+    padding: 0 16px;
+  }
+  .chat-tabs button {
+    font-size: 11px;
+  }
+  .chat-panel .messages {
+    gap: 20px;
+  }
+  .message p {
+    font-size: 12px;
+  }
+  .welcome {
+    gap: 15px;
+  }
+  .welcome h1 {
+    font-size: 29px;
+  }
+  .welcome > .primary-button {
+    padding: 11px 13px;
+    white-space: nowrap;
+  }
+  .welcome > .primary-button svg {
+    display: none;
+  }
+  .map-viewport {
+    padding: 15px 8px;
+  }
+  .space-label {
+    display: inline-block;
+  }
+  .device-button > span {
+    display: inline;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 40;
+    width: 244px;
+    transform: translateX(-100%);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100dvh;
+    padding: 25px 20px 18px;
+  }
+  .mobile-nav-open .sidebar {
+    transform: translateX(0);
+  }
+  .mobile-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #303b2d90;
+    z-index: 39;
+  }
+  .mobile-menu {
+    display: inline-flex;
+    margin-left: -5px;
+  }
+  .mobile-menu,
+  .send-button,
+  .dialog-heading .icon-button,
+  .zoom-controls button {
+    width: 44px;
+    height: 44px;
+  }
+  .topbar {
+    height: 60px;
+    padding: 0 20px;
+  }
+  .breadcrumb {
+    gap: 9px;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+  .topbar-actions > .icon-button {
+    display: none;
+  }
+  .connection-pill {
+    font-size: 9px;
+    padding: 6px 8px;
+  }
+  .main-content {
+    padding: 28px 20px 22px;
+  }
+  .welcome {
+    align-items: flex-start;
+    padding-bottom: 23px;
+  }
+  .welcome h1 {
+    font-size: 27px;
+  }
+  .welcome > div > p:last-child {
+    font-size: 11px;
+    max-width: 35ch;
+    margin-top: 9px;
+  }
+  .welcome > .primary-button {
+    margin-top: 0;
+    padding: 10px 11px;
+    min-height: 37px;
+    white-space: nowrap;
+  }
+  .welcome > .primary-button svg {
+    display: none;
+  }
+  .eyebrow {
+    font-size: 8px;
+    letter-spacing: 1.25px;
+  }
+  .space-heading {
+    margin-bottom: 14px;
+  }
+  .space-heading h2 {
+    font-size: 19px;
+  }
+  .occupancy {
+    font-size: 9px;
+  }
+  .space-heading .avatar-stack {
+    display: none;
+  }
+  .space-label {
+    font-size: 7px;
+    padding: 4px 6px;
+  }
+  .mobile-workspace-tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 19px;
+  }
+  .mobile-workspace-tabs button {
+    padding: 10px 0 12px;
+    font-size: 11px;
+    position: relative;
+    color: var(--muted);
+  }
+  .mobile-workspace-tabs button[aria-pressed='true'] {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .mobile-workspace-tabs button[aria-pressed='true']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+  }
+  .mobile-workspace-tabs button > span {
+    font-size: 8px;
+    padding: 1px 5px;
+    background: #e7ebdc;
+    border-radius: 4px;
+    margin-left: 5px;
+    color: var(--muted);
+  }
+  .workspace-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .chat-panel {
+    min-height: 530px;
+  }
+  .app-shell[data-mobile-tab='space'] .chat-panel {
+    display: none;
+  }
+  .app-shell[data-mobile-tab='chat']
+    .space-column
+    > :not(.space-heading):not(.mobile-workspace-tabs) {
+    display: none;
+  }
+  .map-shell {
+    border-radius: 5px;
+  }
+  .map-viewport {
+    min-height: 0;
+    display: block;
+    padding: 5px 0 12px;
+  }
+  .map-bottom {
+    padding: 4px 12px 12px;
+    flex-wrap: wrap;
+  }
+  .zoom-controls {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .map-bottom p {
+    font-size: 8px;
+  }
+  .map-you {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+    color: var(--muted);
+    border-top: 1px solid #dce2cf;
+    padding: 11px 13px;
+  }
+  .map-you .avatar {
+    width: 23px;
+    height: 23px;
+    font-size: 8px;
+  }
+  .map-you strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .space-controlbar {
+    padding: 16px 0 20px;
+  }
+  .current-room div > span {
+    font-size: 9px;
+    max-width: 22ch;
+  }
+  .current-room-icon {
+    width: 32px;
+    height: 34px;
+    border-radius: 7px;
+  }
+  .device-button {
+    padding: 9px;
+  }
+  .device-button > span {
+    display: none;
+  }
+  .device-controls {
+    gap: 5px;
+  }
+  .app-footer {
+    padding-top: 25px;
+    display: block;
+  }
+  .app-footer > span {
+    font-size: 9px;
+  }
+  .app-footer > div {
+    margin-top: 11px;
+    gap: 17px;
+  }
+  .dialog {
+    padding: 24px;
+  }
+  .dialog-heading h2 {
+    font-size: 24px;
+  }
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+  .video-grid .video-tile:first-child {
+    max-width: 45%;
+    margin-left: auto;
+  }
+  .call-actions {
+    gap: 7px;
+  }
+  .call-actions button {
+    padding: 11px 13px;
+  }
+  .team-directory {
+    min-height: 410px;
+    padding: 19px;
+  }
+  .team-intro h3 {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

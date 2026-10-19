@@ -14,11 +14,12 @@ Next.js static export (HTML + JS + local fonts + WebP)
 ```
 
 - Layout, metadata and the case-study body are build-time Server Components. Only its query-aware return links use a small client component under Suspense. Browser movement, devices and connections live in one client boundary, with no request-time Next server.
-- `src/lib/protocol.ts` validates both transport directions; `src/lib/space.ts` owns walkability, room classification and accessible arrival points.
+- Code is layered `src/lib` + `src/components/ui` (shared) → `src/features/*` (call, chat, office, profile, realtime) → `src/app` (composition). Features never import each other or the app layer; `tests/unit/architecture.test.ts` fails on any import that breaks this direction.
+- `src/lib/protocol.ts` validates both transport directions and `src/lib/limits.ts` holds every size, rate and capacity bound shared by client and server; `src/lib/space.ts` owns walkability, room classification and accessible arrival points.
 - `server/rooms.ts` owns authoritative identities, membership, non-overlapping arrivals and bounded history independently of socket APIs.
-- `server/index.ts` is the native Bun local transport. `server/cloudflare.ts` is the hosted transport; both reuse that domain.
-- `src/hooks/use-office.ts` handles handshake deadlines, capped reconnect backoff and validated state. A single pending chat request waits for server ACK; rejected/disconnected/timed-out requests preserve the composer's draft. Changing mode synchronously cancels the old pending request before passive socket cleanup. No automatic replay that might duplicate chat.
-- `src/hooks/use-call.ts` owns explicit consent, SDP/ICE ordering, invitation UUIDs, per-call generation guards, timeouts and media cleanup. Hangup bypasses pending SDP work; a new call receives a fresh queue. Late signals must match both guest and invitation, and late asynchronous failures cannot terminate a newer call. Peer departure ends a pending or active call immediately.
+- `server/session.ts` is the transport-agnostic session: handshake parsing, size and rate limits, validation, chat cooldown and persistence rollback, returning the deliveries to send. `server/index.ts` (Bun, local) and `server/cloudflare.ts` (hosted Durable Object) are thin shells that only move bytes and attachments.
+- `src/features/realtime/use-office.ts` handles handshake deadlines, capped reconnect backoff and validated state. A single pending chat request waits for server ACK; rejected/disconnected/timed-out requests preserve the composer's draft. Changing mode synchronously cancels the old pending request before passive socket cleanup. No automatic replay that might duplicate chat.
+- `src/features/call/use-call.ts` owns explicit consent, SDP/ICE ordering, invitation UUIDs, per-call generation guards, timeouts and media cleanup. Hangup bypasses pending SDP work; a new call receives a fresh queue. Late signals must match both guest and invitation, and late asynchronous failures cannot terminate a newer call. Peer departure ends a pending or active call immediately.
 - Components receive typed callbacks; no global state framework is needed.
 
 ## Guest behavior

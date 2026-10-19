@@ -3,24 +3,18 @@ import {
   ArrowUpRight,
   BookOpen,
   ChevronDown,
-  Coffee,
-  DoorOpen,
-  Headphones,
   HelpCircle,
   LayoutGrid,
-  Plus,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import type { Player } from '@/lib/protocol';
-import { workspaceRoute } from '@/lib/office-navigation';
-import { getRoom, ROOMS, type RoomId } from '@/lib/space';
-import { Avatar } from './avatar';
-export const roomIcons = {
-  studio: LayoutGrid,
-  meeting: DoorOpen,
-  quiet: Headphones,
-  lounge: Coffee,
-};
+import { Avatar } from '@/components/ui/avatar';
+import { ROOM_ICONS } from '@/features/office/room-icons';
+import { STATUS_LABEL } from '@/lib/presence';
+import { workspaceRoute } from '@/lib/routes';
+import type { RoomId } from '@/lib/protocol';
+import { getRoom, ROOMS } from '@/lib/space';
 interface SidebarProps {
   self: Player;
   workspace: string;
@@ -95,12 +89,12 @@ export const Sidebar = ({
     <div className="sidebar-label">
       ROOMS
       <button className="icon-button" aria-label="Invite a teammate" onClick={onInvite}>
-        <Plus size={14} />
+        <UserPlus size={14} />
       </button>
     </div>
     <nav className="room-nav" aria-label="Office rooms">
       {ROOMS.map((room) => {
-        const Icon = roomIcons[room.id];
+        const Icon = ROOM_ICONS[room.id];
         const count = players.filter((player) => getRoom(player) === room.id).length;
         return (
           <button
@@ -128,7 +122,7 @@ export const Sidebar = ({
           <strong>{self.name}</strong>
           <span>
             <span className={`status-dot status-${self.status}`} />
-            {self.status === 'focus' ? 'Focusing' : self.status === 'away' ? 'Away' : 'Available'}
+            {STATUS_LABEL[self.status]}
             {isDemo ? ' · Demo' : ''}
           </span>
         </span>

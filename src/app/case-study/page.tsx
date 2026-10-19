@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { ArrowLeft, ArrowUpRight, Check, Circle, GitBranch, Radio } from 'lucide-react';
-import { OfficeReturnLink } from '@/components/office-return-link';
+import { OfficeReturnLink } from './office-return-link';
 export const metadata: Metadata = { title: 'Behind the build' };
 export default function CaseStudyPage() {
   return (

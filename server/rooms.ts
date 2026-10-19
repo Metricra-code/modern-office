@@ -1,5 +1,12 @@
+import { LIMITS } from '../src/lib/limits';
 import type { ChatMessage, Channel, Player, PresenceStatus, Profile } from '../src/lib/protocol';
-import { isWalkable, type Point } from '../src/lib/space';
+import { findOpenSpot, isWalkable, type Point } from '../src/lib/space';
+
+const LOBBY: Point = { x: 450, y: 315 };
+export interface WorkspaceSnapshot {
+  players: Player[];
+  messages: ChatMessage[];
+}
 
 interface Workspace {
   players: Map<string, Player>;
@@ -11,47 +18,30 @@ export class OfficeRooms {
 
   join(workspaceId: string, profile: Profile): Player {
     const workspace = this.workspaces.get(workspaceId) ?? { players: new Map(), messages: [] };
-    if (workspace.players.size >= 32 || this.membership.size >= 256)
+    if (
+      workspace.players.size >= LIMITS.guestsPerWorkspace ||
+      this.membership.size >= LIMITS.guestsTotal
+    )
       throw new Error('Workspace is full');
-    if (!this.workspaces.has(workspaceId) && this.workspaces.size >= 64)
+    if (!this.workspaces.has(workspaceId) && this.workspaces.size >= LIMITS.workspaces)
       throw new Error('Server is full');
-    const player: Player = {
-      ...profile,
-      id: crypto.randomUUID(),
-      ...this.findSpawn([...workspace.players.values()]),
-      status: 'available',
-    };
+    const spawn = findOpenSpot([...workspace.players.values()], LOBBY);
+    if (!spawn) throw new Error('No open guest position');
+    const player: Player = { ...profile, id: crypto.randomUUID(), ...spawn, status: 'available' };
     workspace.players.set(player.id, player);
     this.workspaces.set(workspaceId, workspace);
     this.membership.set(player.id, workspaceId);
     return player;
   }
 
-  private findSpawn(players: Player[]): Point {
-    // ponytail: at most 32 guests; a bounded floor scan avoids a spatial-index dependency.
-    const candidates = [
-      { x: 450, y: 315 },
-      ...Array.from({ length: 112 }, (_, index) => ({
-        x: 65 + (index % 14) * 56,
-        y: 88 + Math.floor(index / 14) * 56,
-      })),
-    ];
-    const spawn = candidates.find(
-      (point) =>
-        isWalkable(point) &&
-        players.every((player) => Math.hypot(player.x - point.x, player.y - point.y) >= 50),
-    );
-    if (!spawn) throw new Error('No open guest position');
-    return spawn;
-  }
-
-  restore(workspaceId: string, snapshot: { players: Player[]; messages: ChatMessage[] }): void {
+  restore(workspaceId: string, snapshot: WorkspaceSnapshot): void {
     const previous = this.workspaces.get(workspaceId);
-    if (!previous && snapshot.players.length > 0 && this.workspaces.size >= 64)
+    if (!previous && snapshot.players.length > 0 && this.workspaces.size >= LIMITS.workspaces)
       throw new Error('Restored server is full');
     if (
-      snapshot.players.length > 32 ||
-      this.membership.size - (previous?.players.size ?? 0) + snapshot.players.length > 256
+      snapshot.players.length > LIMITS.guestsPerWorkspace ||
+      this.membership.size - (previous?.players.size ?? 0) + snapshot.players.length >
+        LIMITS.guestsTotal
     )
       throw new Error('Restored workspace is full');
     if (
@@ -71,11 +61,11 @@ export class OfficeRooms {
     }
     this.workspaces.set(workspaceId, {
       players: new Map(snapshot.players.map((player) => [player.id, { ...player }])),
-      messages: snapshot.messages.slice(-100).map((message) => ({ ...message })),
+      messages: snapshot.messages.slice(-LIMITS.history).map((message) => ({ ...message })),
     });
   }
 
-  snapshot(workspaceId: string): { players: Player[]; messages: ChatMessage[] } {
+  snapshot(workspaceId: string): WorkspaceSnapshot {
     const workspace = this.workspaces.get(workspaceId);
     return {
       players: [...(workspace?.players.values() ?? [])],
@@ -123,7 +113,7 @@ export class OfficeRooms {
       color: player.color,
       sentAt: Date.now(),
     };
-    workspace.messages = [...workspace.messages, message].slice(-100);
+    workspace.messages = [...workspace.messages, message].slice(-LIMITS.history);
     return message;
   }
 

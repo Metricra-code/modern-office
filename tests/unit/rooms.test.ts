@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { OfficeRooms } from '../../server/rooms';
+import { clientEventSchema, serverEventSchema } from '../../src/lib/protocol';
 
 const profile = { name: 'Kai', color: 'terracotta' as const };
 describe('authoritative guest workspaces', () => {
@@ -42,5 +43,16 @@ describe('authoritative guest workspaces', () => {
     const rooms = new OfficeRooms();
     for (let index = 0; index < 32; index++) rooms.join('alpha', profile);
     expect(() => rooms.join('alpha', profile)).toThrow('Workspace is full');
+  });
+
+  test('snapshots after moves and profile edits parse as a strict welcome event', () => {
+    const rooms = new OfficeRooms();
+    const player = rooms.join('typed-room', { name: 'Guest', color: 'sage' });
+    const move = clientEventSchema.parse({ type: 'move', x: 550, y: 315 });
+    if (move.type === 'move') rooms.move(player.id, move);
+    const edit = clientEventSchema.parse({ type: 'profile', name: 'Alice', color: 'blue' });
+    if (edit.type === 'profile') rooms.profile(player.id, edit);
+    const welcome = { type: 'welcome', selfId: player.id, ...rooms.snapshot('typed-room') };
+    expect(serverEventSchema.safeParse(welcome).success).toBe(true);
   });
 });

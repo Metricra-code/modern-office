@@ -1,0 +1,124 @@
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/manrope-latin-variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Urbanist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/urbanist-latin-variable.woff2') format('woff2');
+}
+:root {
+  --paper: oklch(98% 0.003 130);
+  --surface: oklch(99.5% 0.002 130);
+  --ink: oklch(27% 0.012 140);
+  --muted: oklch(48% 0.009 140);
+  --soft: oklch(62% 0.02 117);
+  --line: oklch(90% 0.006 140);
+  --accent: oklch(34% 0.033 146);
+  --accent-soft: oklch(95% 0.013 146);
+  --sage: oklch(53% 0.055 138);
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --font-body: 'Manrope', sans-serif;
+  --font-display: 'Urbanist', sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+  color: inherit;
+}
+button {
+  border: 0;
+  background: none;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button,
+a,
+input,
+textarea {
+  outline-offset: 4px;
+}
+:focus-visible {
+  outline: 2px solid var(--sage);
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+::selection {
+  background: #d6dfd6;
+  color: #30392f;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: fixed;
+  left: 20px;
+  top: -80px;
+  padding: 12px 20px;
+  background: var(--ink);
+  color: var(--paper);
+  z-index: 100;
+  border-radius: 6px;
+}
+.skip-link:focus {
+  top: 16px;
+}
