@@ -284,7 +284,10 @@ export const Workspace = () => {
                       aria-label="Test camera"
                       onClick={() => {
                         setDialog('devices');
-                        if (call.phase === 'idle') void media.capture(false);
+                        if (call.phase !== 'idle') return;
+                        void media.capture(false).then((stream) => {
+                          if (stream) call.clearError();
+                        });
                       }}
                     >
                       <Video size={19} />

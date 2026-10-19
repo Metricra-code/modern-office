@@ -119,7 +119,6 @@ export const useCall = ({ media, subscribeSignals, connected, peers, send }: Cal
   }, [cleanup, send]);
 
   const ring = (from: string, callId: string) => {
-    if (!peers.some((peer) => peer.id === from)) return;
     if (phaseRef.current !== 'idle') {
       if (from !== targetRef.current || callId !== callIdRef.current)
         send(from, { kind: 'decline', callId });
@@ -152,7 +151,6 @@ export const useCall = ({ media, subscribeSignals, connected, peers, send }: Cal
     }
   };
   const handleSignal = useEffectEvent(async ({ from, signal }: IncomingSignal): Promise<void> => {
-    if (!connected) return;
     if (signal.kind === 'invite') {
       ring(from, signal.callId);
       return;
